@@ -1,7 +1,16 @@
-# Thêta — v3.0
+# Thêta — v3.1
 
 Web-app personnelle, 100 % locale, hors ligne, installable sur Android.
 
+
+## Nouveautés v3.1
+- Écran Jour : semaine dans le bandeau du haut, « Ma journée » de 8 h à 20 h avec événements et créneaux libres (toucher un créneau pour y créer une tâche ou un événement), glisser fluide entre les jours, bloc « Ce mois-ci » séparé.
+- Tâches : échéance « un mois » (ex. « préparer les bulletins en novembre »), photos, sous-étapes visibles avec ＋ et ✕ rapides.
+- Notes : sous-dossiers visibles sur chaque dossier, sous-éléments visibles et modifiables directement, réorganisation fluide.
+- Rappels : chaque mois, dernier jour ouvré du mois, chaque année, certains jours de la semaine, toutes les 2 semaines.
+- Bibliothèque : recherche d'un livre par titre ou par genre (couverture et auteur remplis automatiquement).
+- Lieux : suggestions d'adresses Google Maps (clé API à renseigner dans Plus › Google).
+- Recherche et synchronisation déplacées dans le menu Plus ; journal retiré ; hauteur de la barre de navigation réglable.
 
 ## Nouveautés v3
 - **Écran Jour** : frise des 7 prochains jours (glisser du doigt ou toucher un jour) ; tâches et rappels faits passent dans « Accompli », décochables ; vacances scolaires affichées.
