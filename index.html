@@ -250,6 +250,14 @@ body.vjour #main{touch-action:pan-y}
 .iconpick button{font-size:30px;border:2px solid var(--line);background:var(--card2);border-radius:16px;padding:10px 0}
 .iconpick button.on{border-color:var(--a1)}
 .hero-day{font-size:21px;font-weight:800;margin-top:2px}
+.fontprev{margin-top:10px;padding:10px 12px;border-radius:12px;background:var(--card2);font-size:15px;line-height:1.5}
+.taborder{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;position:relative}
+.tabtile{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px;border-radius:14px;background:var(--card2);border:1px solid var(--line);touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none;position:relative}
+.tabtile span{font-size:24px}.tabtile small{font-size:12px;font-weight:650}
+.tabtile em{position:absolute;top:-7px;font-style:normal;font-size:9.5px;font-weight:700;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;border-radius:6px;padding:0 5px}
+.iconrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.icsel{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px;border-radius:14px;background:var(--card2);border:2px solid transparent}
+.icsel span{font-size:26px}.icsel small{font-size:12px;font-weight:650}.icsel.on{border-color:var(--a1)}
 /* Forms */
 .fld{display:block;margin:10px 0}
 .fld>span{display:block;font-size:12.5px;font-weight:650;color:var(--muted);margin:0 0 5px 2px}
@@ -324,7 +332,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.3.0';
+const VERSION='3.4.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -390,7 +398,7 @@ const PALETTES={
     dark:{bg:'#16100b',card:'#211811',card2:'#2c2118',card3:'#392b20'},light:{bg:'#faf3ea',card:'#ffffff',card2:'#f3e7d8',card3:'#e8d6c0'}},
 };
 const palPairs=P=>[...Object.values(P.tabs),...P.extra];
-const TAB_ICONS={jour:['☀️','🌤️','🏠','🌅','⭐','🧭'],taches:['✅','☑️','✔️','📋','📌','🎯','🏁','⚡','🧩','💪'],todo:['📝','🗒️','📒','💡','📂','🗂️'],agenda:['📅','🗓️','📆','⏰','🕒']};
+const TAB_ICONS={jour:['☀️','🌤️','🌞','🏠','🌅','⭐','🧭','🌈','🍃','☕'],taches:['✅','☑️','✔️','📋','📌','🎯','🏁','⚡','🧩','💪','🚀','🔖'],todo:['📝','🗒️','📒','📓','💡','📂','🗂️','🖊️','🧠','📎'],agenda:['📅','🗓️','📆','⏰','🕒','⌚','🔔','🗺️']};
 const tabIcon=k=>(S.settings.tabIcons&&S.settings.tabIcons[k])||TABS[k][0];
 const LIBT={livre:['📖','Livre'],film:['🎬','Film'],serie:['📺','Série'],bd:['💬','BD']};
 const LOANT={...LIBT,jeu:['🎲','Jeu'],autre:['📦','Autre']};
@@ -478,7 +486,7 @@ async function applyBg(){
 }
 
 /* ================= État d'interface ================= */
-let view='jour', sub=null, todoFolder=null, taskFilter='todo', libTab='ideas', libFilter='all', loanGroup='person', agendaPast=false, showLoansDone=false;
+let view='jour', sub=null, todoFolder=null, taskFilter='todo', libTab='ideas', libFilter='all', loanGroup='person', iconEdit=null, agendaPast=false, showLoansDone=false;
 
 /* ================= Rendu ================= */
 const VIEWS={}, SUBS={};
@@ -899,17 +907,19 @@ SUBS.reglages=()=>{
   <div class="fld"><span>Barre de navigation</span>${chips([['bottom','⬇️ En bas'],['top','⬆️ En haut']],s.navPos,'setNav')}</div>
   <div class="range"><span class="small">Hauteur de la barre</span><input type="range" min="0" max="60" step="2" value="${+s.navLift||0}" data-r="navLift" aria-label="Hauteur"><b>${+s.navLift||0} px</b></div>
   <div class="small muted" style="margin-top:4px">Remontez la barre si les boutons de votre téléphone la cachent.</div></div>`;
-  html+=sec('Police')+`<div class="card fonts">${Object.entries(FONTS).map(([k,[l,ff]])=>`<button class="fontopt ${(s.font||'system')===k?'on':''}" data-a="setFont" data-id="${k}" style="font-family:${esc(ff)}"><b>${l}</b><small>Conseil de cycle jeudi 17h — 0123456789</small></button>`).join('')}</div>`;
+  const fk0=FONTS[s.font]?s.font:'system';
+  html+=sec('Police')+`<div class="card"><select data-c="setting" data-f="font" aria-label="Police">${Object.entries(FONTS).map(([k,[l]])=>`<option value="${k}" ${fk0===k?'selected':''}>${l}</option>`).join('')}</select><div class="fontprev" style="font-family:${esc(FONTS[fk0][1])}"><b>Conseil de cycle jeudi 17 h</b><br>Acheter des feutres pour la classe — 0123456789</div></div>`;
   html+=sec('Fond d\'écran')+`<div class="card"><div class="bgs">${[['none','Aucun'],...Object.entries(ZEN).map(([k,z])=>[k,z.name])].map(([k,l])=>`<button class="bgt ${s.bg===k?'on':''}" data-a="setBg" data-id="${k}" style="${ZEN[k]?`background-image:url('${zenURL(k)}')`:''}">${k==='none'?'<span style="position:static;background:none;color:var(--muted)">Uni</span>':`<span>${l}</span>`}</button>`).join('')}${hasCustomBg?`<button class="bgt ${s.bg==='custom'?'on':''}" data-a="setBg" data-id="custom"><img data-img="bg_custom" alt=""><span>Ma photo</span></button>`:''}<button class="bgt add" data-a="pickBg"><b style="font-size:22px">📷</b>Depuis le téléphone</button></div>
   <div class="range"><span class="small">Voile</span><input type="range" min="0" max="85" step="5" value="${s.bgVeil}" data-r="bgVeil" aria-label="Voile"><b>${s.bgVeil} %</b></div>
   <div class="range"><span class="small">Flou&nbsp;</span><input type="range" min="0" max="16" step="1" value="${s.bgBlur}" data-r="bgBlur" aria-label="Flou"><b>${s.bgBlur} px</b></div>
   <div class="small muted" style="margin-top:8px">Le voile atténue l'image pour garder les textes lisibles.</div></div>`;
-  html+=sec('Ordre des onglets')+`<div class="card">${s.tabOrder.map((k,i)=>`<div class="srow"><button class="icon-btn sm" data-a="tabIconPick" data-id="${k}" aria-label="Changer l'icône">${tabIcon(k)}</button><span class="grow">${TABS[k][1]}${i===0?' <span class="small muted">· écran d\'ouverture</span>':''}</span><button class="icon-btn sm" data-a="tabMove" data-id="${i}" data-v="-1" ${i===0?'disabled':''}>↑</button><button class="icon-btn sm" data-a="tabMove" data-id="${i}" data-v="1" ${i===n-1?'disabled':''}>↓</button></div>`).join('')}</div>`;
+  html+=sec('Ordre des onglets')+`<div class="card"><div class="taborder" id="tabOrder">${s.tabOrder.map((k,i)=>`<div class="tabtile handle" data-id="${k}"><span>${tabIcon(k)}</span><small>${TABS[k][1]}</small>${i===0?'<em>ouverture</em>':''}</div>`).join('')}</div><div class="small muted" style="margin-top:8px">Faites glisser un onglet pour le déplacer. Le premier s'ouvre au démarrage.</div></div>`;
+  html+=sec('Icônes de l\'application')+`<div class="card"><div class="iconrow">${['jour','taches','todo','agenda'].map(k=>`<button class="icsel ${iconEdit===k?'on':''}" data-a="iconEdit" data-id="${k}"><span>${tabIcon(k)}</span><small>${TABS[k][1]}</small></button>`).join('')}</div>${iconEdit?`<div class="small muted" style="margin:12px 0 2px">Choisissez l'icône de « ${TABS[iconEdit][1]} » :</div><div class="iconpick">${(TAB_ICONS[iconEdit]||[]).map(ic=>`<button type="button" class="${tabIcon(iconEdit)===ic?'on':''}" data-a="setTabIcon" data-id="${iconEdit}|${ic}">${ic}</button>`).join('')}</div>`:'<div class="small muted" style="margin-top:10px">Touchez une icône pour voir les propositions.</div>'}</div>`;
   html+=sec('Organisation de la journée')+`<div class="card"><label class="fld"><span>Vacances scolaires affichées dans l'agenda</span><select data-c="setting" data-f="zone">${[['','Ne pas afficher'],['Zone A','Zone A'],['Zone B','Zone B'],['Zone C','Zone C'],['Corse','Corse']].map(([v,l])=>`<option value="${v}" ${s.zone===v?'selected':''}>${l}</option>`).join('')}</select></label><div class="row2"><label class="fld"><span>Début de journée</span><input type="time" data-c="setting" data-f="dayStart" value="${s.dayStart}"></label><label class="fld"><span>Fin de journée</span><input type="time" data-c="setting" data-f="dayEnd" value="${s.dayEnd}"></label></div><label class="fld"><span>Durée par défaut d'une tâche</span><select data-c="setting" data-f="defaultDuration">${[15,30,45,60,90,120].map(v=>`<option value="${v}" ${+s.defaultDuration===v?'selected':''}>${fmtDur(v)}</option>`).join('')}</select></label></div>`;
   html+=sec('Synchronisation & notifications')+`<div class="card"><button class="srow" style="width:100%;background:none;border:0;text-align:left;padding:10px 0" data-a="goSub" data-id="google"><span class="grow">🔗 Google Agenda</span><span class="muted">${s.clientId?(tokValid()?'Connecté':'Configuré'):'À configurer'} →</span></button><div class="srow"><span class="grow">🔔 Notifications des rappels<div class="small muted">Affichées quand l'app est ouverte ou en arrière-plan récent</div></span>${'Notification' in window?(s.notif&&Notification.permission==='granted'?'<span class="tag ok">Activées</span>':'<button class="btn sm primary" data-a="notifOn">Activer</button>'):'<span class="small muted">Non disponible</span>'}</div></div>`;
   html+=sec('Sauvegarde')+`<div class="card"><div class="small muted">Vos données restent sur ce téléphone. Exportez-les régulièrement (fichier .json avec images) pour ne rien perdre.${s.lastBackup?' Dernier export : '+fmtDate(iso(new Date(s.lastBackup)))+'.':''}</div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary" data-a="export">💾 Exporter</button><button class="btn ghost" data-a="import">📂 Importer</button></div><div class="small muted" id="usage" style="margin-top:10px"></div></div>`;
   html+=sec('Zone sensible')+`<div class="card"><button class="btn ghost danger" data-a="resetAll">Tout effacer et repartir de zéro</button></div><p class="small muted" style="text-align:center;margin-top:18px">Thêta ${VERSION} · 100 % local, hors ligne</p>`;
-  return {title:'Réglages',html,after(){ Object.keys(FONTS).forEach(loadFont); if(navigator.storage&&navigator.storage.estimate) navigator.storage.estimate().then(e=>{const el=$('#usage');if(el)el.textContent=`Espace utilisé : ${(e.usage/1048576).toFixed(1)} Mo sur ${(e.quota/1073741824).toFixed(1)} Go disponibles`}).catch(()=>{}) }};
+  return {title:'Réglages',html,after(){ sortable($('#tabOrder'),'.tabtile',ids=>{S.settings.tabOrder=ids;save();render()}); Object.keys(FONTS).forEach(loadFont); if(navigator.storage&&navigator.storage.estimate) navigator.storage.estimate().then(e=>{const el=$('#usage');if(el)el.textContent=`Espace utilisé : ${(e.usage/1048576).toFixed(1)} Mo sur ${(e.quota/1073741824).toFixed(1)} Go disponibles`}).catch(()=>{}) }};
 };
 
 /* ================= Feuilles (formulaires) ================= */
@@ -1790,7 +1800,8 @@ const A={
   setTheme(id){ S.settings.theme=id; save(); render(); },
   setPalette(id){ S.settings.palette=id; save(); render(); toast(id?'🎨 Palette « '+PALETTES[id].name+' »':'🎨 Couleur unique'); },
   tabIconPick(k){ openSheet('Icône de l\'onglet '+TABS[k][1],`<div class="iconpick">${(TAB_ICONS[k]||[]).map(ic=>`<button type="button" class="${tabIcon(k)===ic?'on':''}" data-a="setTabIcon" data-id="${k}|${ic}">${ic}</button>`).join('')}</div>`); },
-  setTabIcon(v){ const[k,ic]=v.split('|'); S.settings.tabIcons={...(S.settings.tabIcons||{}),[k]:ic}; save(); closeSheet(); render(); },
+  iconEdit(k){ iconEdit=iconEdit===k?null:k; render(); },
+  setTabIcon(v){ const i=v.indexOf('|'), k=v.slice(0,i), ic=v.slice(i+1); S.settings.tabIcons={...(S.settings.tabIcons||{}),[k]:ic}; save(); if(sheetOpen) closeSheet(); render(); toast('Icône de « '+TABS[k][1]+' » : '+ic); },
   setAccent(id){ S.settings.accent=id; save(); render(); },
   setNav(id){ S.settings.navPos=id; save(); render(); },
   tabMove(id,el){ const i=+id, j=i+(+el.dataset.v), o=S.settings.tabOrder; if(j<0||j>=o.length) return; [o[i],o[j]]=[o[j],o[i]]; save(); render(); },
@@ -1818,6 +1829,7 @@ const C={
   setting(el){ const f=el.dataset.f; S.settings[f]=el.type==='checkbox'?el.checked:(f==='defaultDuration'?+el.value:el.value.trim()); save();
     if(f==='zone'){ S.holidays=null; save(); if(S.settings.zone) loadHolidays(true); else render(); }
     if(f==='mapsKey'){ mapsP=null; }
+    if(f==='font'){ render(); }
     if(f==='clientId'){ tokenClient=null; if(el.value.trim()) loadGIS().catch(()=>{}); render(); }
     if(f==='pushReminders'){ S.reminders.forEach(r=>{ if(r.gid||(S.settings.pushReminders&&!(r.recur==='none'&&r.done))) r.sync='pending'; }); save(); queueSync(); }
     if(f==='pushTasks'){ S.tasks.forEach(x=>{ if(x.date&&!x.noSync&&(S.settings.pushTasks||x.gid)) x.sync='pending'; }); save(); queueSync(); }
