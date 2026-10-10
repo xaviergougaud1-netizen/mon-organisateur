@@ -1,4 +1,4 @@
-# Thêta — v2.1
+# Thêta — v2.2
 
 Web-app personnelle, 100 % locale, hors ligne, installable sur Android.
 
@@ -20,7 +20,7 @@ Adresse : `https://xaviergougaud1-netizen.github.io/mon-organisateur/`
 
 1. Ouvrir l'adresse dans Chrome sur Android.
 2. Menu ⋮ › **Installer l'application** (ou « Ajouter à l'écran d'accueil »).
-3. Un appui long sur l'icône propose les raccourcis : Dicter une note, Tâches, Agenda.
+3. Un appui long sur l'icône propose les raccourcis : Aujourd'hui, Tâches, Agenda.
 
 ## Brancher Google Agenda (une seule fois, ~10 min)
 
@@ -43,6 +43,8 @@ Adresse : `https://xaviergougaud1-netizen.github.io/mon-organisateur/`
 - Agendas en lecture seule (souvent Todoist) : importés mais non modifiables (🔒).
 
 ## Notes vocales : comment l'app range
+
+Le micro 🎙️ est sur l'écran **Jour**. Touche-le, parle (aussi longtemps que tu veux), touche ⏹ : les propositions de rangement apparaissent juste en dessous. ⌨️ permet d'écrire au lieu de dicter. L'historique est dans **Plus › Notes**.
 
 L'analyse se fait **sur le téléphone** (aucun envoi). Chaque note est découpée (dire « à la ligne », ou utiliser « puis », « ensuite »), puis chaque morceau est proposé avec son type ; tu valides ou corriges d'un geste.
 

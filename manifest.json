@@ -31,9 +31,8 @@
   ],
   "shortcuts": [
     {
-      "name": "Dicter une note",
-      "short_name": "Note",
-      "url": "./?tab=notes",
+      "name": "Aujourd'hui",
+      "url": "./?tab=jour",
       "icons": [
         {
           "src": "icon-192.png",

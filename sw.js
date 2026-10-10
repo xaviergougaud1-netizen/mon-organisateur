@@ -1,6 +1,6 @@
 // Thêta — service worker (fonctionnement hors ligne)
 // Changez ce numéro à chaque mise à jour de index.html pour forcer le rafraîchissement.
-const CACHE = 'theta-v2.1.0';
+const CACHE = 'theta-v2.2.0';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {

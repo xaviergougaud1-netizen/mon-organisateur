@@ -143,7 +143,7 @@ details summary::before{content:"▸ "}details[open] summary::before{content:"�
 .mic{flex:none;width:72px;height:72px;border-radius:50%;border:0;font-size:30px;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;box-shadow:0 10px 26px color-mix(in srgb,var(--a1) 45%,transparent)}
 .mic.rec{background:linear-gradient(135deg,#ff5d6c,#c2185b);animation:pulse 1.2s infinite}
 @keyframes pulse{0%{box-shadow:0 0 0 0 rgba(255,93,108,.6)}100%{box-shadow:0 0 0 22px rgba(255,93,108,0)}}
-.raw{font-size:13.5px;color:var(--muted);font-style:italic;word-break:break-word}
+.raw{font-size:13.5px;color:var(--muted);font-style:italic;word-break:break-word;white-space:pre-line}
 .prop{background:var(--card2);border-radius:16px;padding:12px;margin-top:10px;border:1px solid var(--line)}
 .prop.unsure{border-color:rgba(255,170,40,.55)}
 .tchips{display:flex;gap:6px;overflow-x:auto;margin-bottom:8px;scrollbar-width:none}
@@ -153,6 +153,12 @@ details summary::before{content:"▸ "}details[open] summary::before{content:"�
 .pf{display:flex;flex-direction:column;gap:8px}
 .pbtns{display:flex;justify-content:flex-end;gap:8px;margin-top:10px}
 .warn{font-size:12.5px;color:#f5a623;margin-bottom:6px;font-weight:600}
+/* Dictée sur l'écran Jour */
+.dict{display:flex;align-items:center;gap:14px;margin-top:12px;padding:12px 14px}
+.dict .mic{width:62px;height:62px;font-size:27px}
+.dict-t{font-weight:700;font-size:16px}
+.dict.on .dict-t{font-weight:500;font-style:italic;max-height:7em;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.dict.on{border-color:color-mix(in srgb,#ff5d6c 50%,transparent)}
 /* Forms */
 .fld{display:block;margin:10px 0}
 .fld>span{display:block;font-size:12.5px;font-weight:650;color:var(--muted);margin:0 0 5px 2px}
@@ -224,7 +230,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='2.1.0';
+const VERSION='2.2.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -255,7 +261,7 @@ const plural=(n,s,p)=>n+' '+(n>1?(p||s+'s'):s);
 const linkify=s=>s.replace(/(https?:\/\/[^\s<]+)/g,'<a href="$1" target="_blank" rel="noopener">$1</a>');
 
 const ACCENTS={nuit:['Bleu nuit','#4c6ef5','#1e3a8a'],emeraude:['Émeraude','#12b886','#087f5b'],rose:['Rose bonbon','#f472b6','#d6336c'],sunset:['Coucher de soleil','#fd7e14','#e8304a'],cosmos:['Cosmos','#9775fa','#4338ca']};
-const TABS={jour:['☀️','Jour'],taches:['✅','Tâches'],todo:['📁','Todo'],agenda:['📅','Agenda'],notes:['🎙️','Notes']};
+const TABS={jour:['☀️','Jour'],taches:['✅','Tâches'],todo:['📁','Todo'],agenda:['📅','Agenda']};
 const GRADS=['linear-gradient(135deg,#4c6ef5,#7048e8)','linear-gradient(135deg,#12b886,#0b7285)','linear-gradient(135deg,#f76707,#e03131)','linear-gradient(135deg,#ae3ec9,#5f3dc4)','linear-gradient(135deg,#f06595,#c2255c)','linear-gradient(135deg,#1c7ed6,#15aabf)','linear-gradient(135deg,#f59f00,#e8590c)','linear-gradient(135deg,#37b24d,#2b8a3e)'];
 const LIBT={livre:['📖','Livre'],film:['🎬','Film'],serie:['📺','Série'],bd:['💬','BD']};
 const PT={task:['📋','Tâche'],event:['📅','Agenda'],reminder:['🔔','Rappel'],todo:['📁','Todo'],idea:['💡','Idée'],loan:['📚','Prêt']};
@@ -360,8 +366,8 @@ function applyTheme(){
   applyBg();
 }
 function renderNav(){
-  const cur=sub?'plus':view, nn=S.notes.filter(n=>n.status==='review').length;
-  $('#nav').innerHTML=S.settings.tabOrder.map(k=>`<button class="${cur===k?'on':''}" data-a="tab" data-id="${k}"><span class="ic">${TABS[k][0]}</span>${TABS[k][1]}${k==='notes'&&nn?`<em class="badge">${nn}</em>`:''}</button>`).join('')
+  const cur=sub?'plus':view;
+  $('#nav').innerHTML=S.settings.tabOrder.map(k=>`<button class="${cur===k?'on':''}" data-a="tab" data-id="${k}"><span class="ic">${TABS[k][0]}</span>${TABS[k][1]}</button>`).join('')
     +`<button class="${cur==='plus'?'on':''}" data-a="plus"><span class="ic">⋯</span>Plus</button>`;
 }
 function render(){
@@ -372,6 +378,7 @@ function render(){
   $('#topActions').innerHTML=r.actions||'';
   $('#main').innerHTML=r.html+(r.fab?`<button class="fab" data-a="${r.fab}" aria-label="Ajouter">+</button>`:'');
   if(r.after) r.after();
+  if(recOn) showLive();
   $$('img[data-img]').forEach(async im=>{const u=await imgURL(im.dataset.img);if(u)im.src=u});
 }
 
@@ -430,10 +437,11 @@ VIEWS.jour=()=>{
   const lateR=S.reminders.filter(r=>r.recur==='none'&&!r.done&&r.date<t);
   const evs=eventsOn(t), rems=remindersOn(t), sug=suggest();
   const acc=[...S.tasks.filter(x=>doneOn(x,t)).map(x=>'✅ '+x.title),...S.items.filter(x=>doneOn(x,t)).map(x=>'📁 '+x.text),...S.reminders.filter(r=>remDone(r,t)&&remOccurs(r,t)).map(r=>'🔔 '+r.title)];
-  const nn=S.notes.filter(n=>n.status==='review').length;
   const hasData=S.tasks.length+S.items.length+S.events.length>5;
   let html=`<div class="hero"><div class="hero-top"><div><div class="hero-date">${fmtLong(t)}</div><div class="hero-hello">${hello} 👋</div></div><div class="hero-pct">${pct}%</div></div><div class="progress"><i style="width:${pct}%"></i></div><div class="hero-sub">${tt.length?`${dn} / ${plural(tt.length,'tâche')} du jour accomplie${dn>1?'s':''}`:"Aucune tâche prévue aujourd'hui"}${late.length?` · ${late.length} en retard`:''}${evs.length?` · ${plural(evs.length,'événement')}`:''}</div></div>`;
-  if(nn) html+=`<button class="banner" data-a="tab" data-id="notes">🎙️ ${plural(nn,'note')} à valider<span class="grow"></span>→</button>`;
+  html+=dictCard();
+  const nrev=S.notes.filter(n=>n.status==='review').length;
+  if(nrev) html+=sec('À ranger',nrev)+reviewCards();
   if(hasData&&(!S.settings.lastBackup||Date.now()-S.settings.lastBackup>14*864e5)) html+=`<button class="banner" data-a="export">💾 Pensez à sauvegarder vos données<span class="grow"></span>Exporter</button>`;
   html+=sec('Tâches du jour',tt.length||null)+(tt.length?`<div class="list">${tt.map(taskRow).join('')}</div>`:empty('','Journée libre',`<div><button class="btn sm primary" data-a="newTask" style="margin-top:8px">+ Ajouter une tâche</button></div>`,1));
   if(late.length||lateR.length) html+=sec('En retard',late.length+lateR.length)+`<div class="list">${late.map(taskRow).join('')}${lateR.map(remRow).join('')}</div>`;
@@ -536,15 +544,19 @@ function propCard(n,p){
   if(p.type==='loan') f+=`<div class="row2">${inp('person','text',p.person,'Prêté à…')}${inp('date','date',p.date)}</div>`;
   return `<div class="prop ${p.conf<.7?'unsure':''}"><div class="tchips">${Object.entries(PT).map(([k,[i,l]])=>`<button class="tchip ${p.type===k?'on':''}" data-a="propType" data-id="${key}" data-v="${k}">${i} ${l}</button>`).join('')}</div>${p.conf<.7?'<div class="warn">⚠️ Classement incertain : vérifiez le type</div>':''}<div class="pf">${f}</div><div class="pbtns"><button class="btn sm ghost" data-a="propSkip" data-id="${key}">Ignorer</button><button class="btn sm primary" data-a="propOk" data-id="${key}">✓ Valider</button></div></div>`;
 }
-VIEWS.notes=()=>{
+function reviewCards(){
+  return S.notes.filter(n=>n.status==='review').map(n=>{const P=n.props.filter(p=>p.status==='pending');
+    return `<div class="card" style="margin-bottom:12px"><div class="raw">« ${esc(n.text)} »</div>${P.map(p=>propCard(n,p)).join('')}${P.length>1?`<div class="pbtns" style="margin-top:12px"><button class="btn sm ghost" data-a="noteDiscard" data-id="${n.id}">Tout ignorer</button><button class="btn sm primary" data-a="noteAll" data-id="${n.id}">✓ Tout valider (${P.length})</button></div>`:''}</div>`}).join('');
+}
+function dictCard(){
+  const sr=!!(window.SpeechRecognition||window.webkitSpeechRecognition), on=recOn&&recMode==='jour';
+  return `<div class="card dict ${on?'on':''}"><button id="micBtn" class="mic ${on?'rec':''}" data-a="mic" ${sr?'':'disabled'} aria-label="${on?'Terminer la dictée':'Dicter une note'}">${on?'⏹':'🎙️'}</button><div class="grow"><div class="dict-t" ${on?'id="dictLive"':''}>${on?'J\'écoute…':'Dicter une note'}</div><div class="small muted">${!sr?'Dictée disponible dans Chrome ; utilisez ⌨️ pour écrire.':on?'Touchez ⏹ quand vous avez fini : je range tout.':'Tâche, rendez-vous, rappel, liste… je propose où ranger.'}</div></div>${on?'':'<button class="icon-btn" data-a="typeNote" aria-label="Écrire une note">⌨️</button>'}</div>`;
+}
+SUBS.notes=()=>{
   const sr=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
-  let html=`<div class="card compose"><textarea id="noteText" placeholder="Dictez ou écrivez, par exemple :&#10;Conseil de cycle jeudi 17h&#10;Acheter des feutres pour la classe&#10;Rappelle-moi d'appeler maman demain soir">${esc(S.draft||'')}</textarea><div class="compose-bar"><button id="micBtn" class="mic ${recOn?'rec':''}" data-a="mic" ${sr?'':'disabled'} aria-label="Dicter">🎙️</button><div class="grow small muted">${sr?(recOn?'<b style="color:var(--text)">J\'écoute…</b> touchez à nouveau pour arrêter.':'Touchez le micro et parlez. Dites « à la ligne » entre deux idées.'):'Dictée vocale disponible dans Chrome uniquement.'}</div></div><button class="btn primary block" data-a="analyze">✨ Analyser et ranger</button></div>`;
-  const rev=S.notes.filter(n=>n.status==='review');
-  if(rev.length){
-    html+=sec('À valider',rev.length);
-    for(const n of rev){ const P=n.props.filter(p=>p.status==='pending');
-      html+=`<div class="card" style="margin-bottom:12px"><div class="raw">« ${esc(n.text)} »</div>${P.map(p=>propCard(n,p)).join('')}<div class="pbtns" style="margin-top:12px"><button class="btn sm ghost" data-a="noteDiscard" data-id="${n.id}">Tout ignorer</button><button class="btn sm primary" data-a="noteAll" data-id="${n.id}">✓ Tout valider (${P.length})</button></div></div>`; }
-  }
+  let html=`<div class="card compose"><textarea id="noteText" placeholder="Dictez ou écrivez, par exemple :&#10;Conseil de cycle jeudi 17h&#10;Acheter des feutres pour la classe&#10;Rappelle-moi d'appeler maman demain soir">${esc(S.draft||'')}</textarea><div class="compose-bar"><button id="micBtn" class="mic ${recOn&&recMode==='notes'?'rec':''}" data-a="mic" ${sr?'':'disabled'} aria-label="Dicter">🎙️</button><div class="grow small muted">${sr?(recOn&&recMode==='notes'?'<b style="color:var(--text)">J\'écoute…</b> touchez à nouveau pour arrêter.':'Touchez le micro et parlez. Dites « à la ligne » entre deux idées.'):'Dictée vocale disponible dans Chrome uniquement.'}</div></div><button class="btn primary block" data-a="analyze">✨ Analyser et ranger</button></div>`;
+  const nrev=S.notes.filter(n=>n.status==='review').length;
+  if(nrev) html+=sec('À ranger',nrev)+reviewCards();
   const arch=S.notes.filter(n=>n.status==='archived');
   if(arch.length) html+=`<details style="margin-top:18px"><summary>Archives (${arch.length})</summary><div class="list">${arch.map(n=>`<div class="item" style="align-items:flex-start"><div class="grow"><div class="small muted">${fmtDate(iso(new Date(n.created)))} · ${hhmm(new Date(n.created))}</div><div class="raw">« ${esc(n.text)} »</div><div class="meta" style="flex-direction:column;gap:3px">${(n.props||[]).map(p=>`<span>${p.status==='done'?esc(p.result||''):'✕ ignoré : '+esc(p.title)}</span>`).join('')}</div></div><button class="icon-btn sm" data-a="delNote" data-id="${n.id}" aria-label="Supprimer">🗑</button></div>`).join('')}</div></details>`;
   return {title:'Notes',html};
@@ -901,20 +913,48 @@ function checkNote(n){ if(n.props.every(p=>p.status!=='pending')){n.status='arch
 function findProp(key){const[nid,pid]=key.split(':');const n=S.notes.find(x=>x.id===nid);return n?[n,n.props.find(p=>p.id===pid)]:[null,null]}
 
 /* ================= Dictée vocale ================= */
-let rec=null, recOn=false;
-function toggleMic(){
-  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){toast('Dictée indisponible : ouvrez l\'app dans Chrome');return}
-  if(recOn&&rec){rec.stop();return}
-  const ta=$('#noteText'); if(!ta) return;
-  rec=new SR(); rec.lang='fr-FR'; rec.interimResults=true; rec.continuous=!/Android/i.test(navigator.userAgent);
-  const base=ta.value.trim()?ta.value.replace(/\s*$/,'\n'):''; let fin='';
-  const clean=s=>s.replace(/\s*\b(?:point à la ligne|à la ligne|nouvelle ligne|retour à la ligne)\b\s*/gi,'\n').replace(/\s*\bpoint virgule\b\s*/gi,' ; ');
-  rec.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)fin+=r[0].transcript.trim()+' ';else interim+=r[0].transcript}
-    const el=$('#noteText');if(el){el.value=clean(base+fin+interim);S.draft=el.value}};
-  rec.onerror=ev=>{toast(ev.error==='not-allowed'||ev.error==='service-not-allowed'?'🎙️ Micro refusé : autorisez-le dans les réglages de Chrome':ev.error==='no-speech'?'Je n\'ai rien entendu':ev.error==='network'?'La dictée Chrome nécessite une connexion':'Dictée : '+ev.error)};
-  rec.onend=()=>{recOn=false;const el=$('#noteText');if(el){el.value=clean(el.value);S.draft=el.value}save();if(view==='notes'&&!sub)render()};
-  try{rec.start();recOn=true;render()}catch(e){toast('Dictée : '+e.message)}
+let rec=null, recOn=false, recWant=false, recBuf='', recInterim='', recMode='jour', recTimer=null;
+const SRc=()=>window.SpeechRecognition||window.webkitSpeechRecognition;
+const cleanDict=s=>s.replace(/[ \t]*(?<![\wÀ-ÿ])(?:point à la ligne|retour à la ligne|nouvelle ligne|à la ligne|a la ligne)(?![\wÀ-ÿ])[ \t]*/gi,'\n').replace(/[ \t]*(?<![\wÀ-ÿ])point virgule(?![\wÀ-ÿ])[ \t]*/gi,' ; ').replace(/[ \t]+/g,' ').replace(/\n\s*\n+/g,'\n');
+function showLive(){
+  const t=cleanDict(recBuf+recInterim);
+  if(recMode==='notes'){const el=$('#noteText');if(el){el.value=t;S.draft=t}}
+  else{const el=$('#dictLive');if(el){el.textContent=t.trim()||'J\'écoute…';el.scrollTop=el.scrollHeight}}
+}
+function recSession(){
+  const SR=SRc(); rec=new SR(); rec.lang='fr-FR'; rec.interimResults=true; rec.continuous=!/Android/i.test(navigator.userAgent);
+  rec.onresult=e=>{let interim='';for(let i=e.resultIndex;i<e.results.length;i++){const r=e.results[i];if(r.isFinal)recBuf+=r[0].transcript.trim()+' ';else interim+=r[0].transcript}recInterim=interim;showLive()};
+  rec.onerror=ev=>{
+    if(['not-allowed','service-not-allowed','audio-capture'].includes(ev.error)){recWant=false;toast('🎙️ Micro refusé : autorisez-le dans les réglages de Chrome')}
+    else if(ev.error==='network'){recWant=false;toast('La dictée nécessite une connexion internet')}
+  };
+  rec.onend=()=>{ if(recInterim){recBuf+=recInterim.trim()+' ';recInterim=''} if(recBuf.trim()&&!/\n\s*$/.test(recBuf)) recBuf=recBuf.trimEnd()+'\n'; if(recWant){try{recSession()}catch(e){finishRec()}} else finishRec(); };
+  rec.start();
+}
+function micStart(mode){
+  if(!SRc()){toast('Dictée indisponible : ouvrez l\'app dans Chrome');return}
+  recMode=mode; recWant=true; recInterim='';
+  const ta=$('#noteText'); recBuf=mode==='notes'&&ta&&ta.value.trim()?ta.value.replace(/\s*$/,'\n'):'';
+  try{recSession()}catch(e){toast('Dictée : '+e.message);return}
+  recOn=true; clearTimeout(recTimer); recTimer=setTimeout(micStop,180000);
+  if(navigator.vibrate) navigator.vibrate(15);
+  render();
+}
+function micStop(){ recWant=false; clearTimeout(recTimer); if(rec){try{rec.stop()}catch(e){finishRec()}} else finishRec(); }
+function finishRec(){
+  if(!recOn) return;
+  recOn=false; rec=null;
+  const text=cleanDict(recBuf+recInterim).trim(); recBuf=''; recInterim='';
+  if(recMode==='notes'){S.draft=text;save();render();return}
+  if(!text){render();toast('Je n\'ai rien entendu');return}
+  if(!analyzeText(text)){S.draft=text;save();render()}
+}
+function analyzeText(text){
+  const props=parseNote(text);
+  if(!props.length){toast('Je n\'ai rien trouvé à ranger');return false}
+  S.notes.unshift({id:uid(),text,created:Date.now(),status:'review',props}); save(); render();
+  toast(`✨ ${plural(props.length,'élément détecté','éléments détectés')} : vérifiez et validez`);
+  return true;
 }
 
 /* ================= Google Agenda (synchro directe, 2 sens) ================= */
@@ -1103,7 +1143,7 @@ function toast(msg,btn,fn){
 let imgTarget=null;
 const A={
   tab(id){ if(view==='todo'&&id==='todo'&&!sub) todoFolder=null; view=id; sub=null; render(); scrollTo(0,0); },
-  plus(){ openSheet('Plus',`<div class="menu">${[['rappels','🔔','Rappels'],['habitudes','🔁','Habitudes'],['biblio','📚','Bibliothèques'],['stats','📊','Statistiques'],['google','🔗','Google Agenda'],['reglages','⚙️','Réglages']].map(([k,i,l])=>`<button type="button" data-a="goSub" data-id="${k}"><span>${i}</span>${l}</button>`).join('')}</div>`); },
+  plus(){ openSheet('Plus',`<div class="menu">${[['notes','🎙️','Notes'],['rappels','🔔','Rappels'],['habitudes','🔁','Habitudes'],['biblio','📚','Bibliothèques'],['stats','📊','Statistiques'],['google','🔗','Google Agenda'],['reglages','⚙️','Réglages']].map(([k,i,l])=>`<button type="button" data-a="goSub" data-id="${k}"><span>${i}</span>${l}</button>`).join('')}</div>`); },
   goSub(id){ if(sheetOpen){hideSheet();history.replaceState({nav:1},'')} else history.pushState({nav:1},''); sub=id; render(); scrollTo(0,0); },
   back(){ navUp(); },
   closeSheet(){ closeSheet(); },
@@ -1134,15 +1174,16 @@ const A={
   editItem(id){ const it=S.items.find(i=>i.id===id); if(it) itemSheet(it); },
   clearDone(){ const L=S.items.filter(i=>(i.folderId||null)===todoFolder&&i.done); if(!confirm(`Effacer ${plural(L.length,'élément terminé','éléments terminés')} ?`)) return; L.forEach(i=>(i.images||[]).forEach(id=>IDB.del(id).catch(()=>{}))); S.items=S.items.filter(i=>!L.includes(i)); save(); render(); },
   // Notes
-  mic(){ toggleMic(); },
+  mic(){ if(recOn) micStop(); else micStart(sub==='notes'?'notes':'jour'); },
   analyze(){
-    if(recOn&&rec) rec.stop();
+    if(recOn) micStop();
     const ta=$('#noteText'), text=(ta?ta.value:'').trim();
     if(!text){toast('Dictez ou écrivez d\'abord une note');return}
-    const props=parseNote(text);
-    if(!props.length){toast('Je n\'ai rien trouvé à ranger');return}
-    S.notes.unshift({id:uid(),text,created:Date.now(),status:'review',props}); S.draft=''; save(); render();
-    toast(`✨ ${plural(props.length,'élément détecté','éléments détectés')} : vérifiez et validez`);
+    if(analyzeText(text)){S.draft='';save();render()}
+  },
+  typeNote(){
+    openSheet('Écrire une note',fld('Une idée par ligne',`<textarea name="text" required autofocus style="min-height:150px" placeholder="Conseil de cycle jeudi 17h&#10;Acheter des feutres pour la classe&#10;Rappelle-moi d'appeler maman demain soir">${esc(S.draft||'')}</textarea>`),
+      {saveLabel:'✨ Ranger',onSave(fd){const t=fd.text.trim();if(!t)return false;closeSheet();if(analyzeText(t)){S.draft='';save()}}});
   },
   propType(key,el){ const[n,p]=findProp(key); if(!p) return; p.type=el.dataset.v; p.conf=1; if(p.type==='event'&&!p.date)p.date=today(); if(p.type==='todo'&&!p.folderId)p.folderId=null; save(); render(); },
   propOk(key){ const[n,p]=findProp(key); if(!p) return; if(!p.title.trim()){toast('Intitulé vide');return} if(p.type==='loan'&&!p.person){toast('Indiquez à qui l\'objet est prêté');return} applyProp(p); checkNote(n); save(); render(); toast('✓ '+p.result); },
@@ -1261,6 +1302,7 @@ function init(){
   imgURL('bg_custom').then(u=>{hasCustomBg=!!u;if(S.settings.bg==='custom'&&!u){S.settings.bg='brume';save()}applyBg()});
   const p=new URLSearchParams(location.search).get('tab');
   view=TABS[p]?p:(S.settings.tabOrder[0]||'jour');
+  if(p==='notes'){view='jour';sub='notes'}
   render();
   if('serviceWorker' in navigator&&/^https?:$/.test(location.protocol)) navigator.serviceWorker.register('sw.js').catch(()=>{});
   if(navigator.storage&&navigator.storage.persist) navigator.storage.persist().catch(()=>{});
