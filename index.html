@@ -1008,6 +1008,10 @@ async function loadCalendars(){
 }
 const isReadonly=id=>{const c=S.settings.calendars.find(c=>c.id===id);return !!c&&['reader','freeBusyReader'].includes(c.role)};
 function gTime(date,time){return {dateTime:`${date}T${time}:00`,timeZone:TZ}}
+// En mise à jour (PATCH), Google fusionne start/end : on efface explicitement l'ancien format (journée entière ↔ horaire)
+function forPatch(b){for(const k of ['start','end']){const o=b[k];if(!o)continue;if(o.dateTime)o.date=null;else{o.dateTime=null;o.timeZone=null}}return b}
+const validHM=t=>/^\d{2}:\d{2}$/.test(t||'')&&toMin(t)<1440;
+const validD=d=>/^\d{4}-\d{2}-\d{2}$/.test(d||'');
 function gEventBody(e){
   const b={summary:e.title,location:e.place||'',description:e.notes||''};
   if(e.start){const et=e.end&&(e.end>e.start||(e.endDate&&e.endDate>e.date))?e.end:fromMin(Math.min(toMin(e.start)+60,1439));b.start=gTime(e.date,e.start);b.end=gTime(e.endDate||e.date,et)}
@@ -1034,7 +1038,7 @@ async function sync(interactive){
   if(!S.settings.clientId){if(interactive){toast('Configurez d\'abord Google Agenda');sub='google';render()}return}
   if(!navigator.onLine){if(interactive)toast('Hors ligne : synchronisation reportée');return}
   syncing=true; $$('[data-a=sync] span').forEach(s=>s.classList.add('spin'));
-  let up=0,down=0;
+  let up=0,down=0,failed=[];
   try{
     await getToken(interactive);
     if(!S.settings.calendars.length) await loadCalendars();
@@ -1045,15 +1049,23 @@ async function sync(interactive){
     // 2. envoi des événements
     for(const e of S.events.filter(e=>e.sync==='pending')){
       const cal=e.calId||target; if(isReadonly(cal)){e.sync='ok';continue}
-      const r=e.gid?await gapi('PATCH',`/calendars/${enc(cal)}/events/${enc(e.gid)}`,gEventBody(e)):await gapi('POST',`/calendars/${enc(cal)}/events`,gEventBody(e));
-      if(r){e.gid=r.id;e.gUpdated=r.updated} e.calId=cal; e.sync='ok'; up++; save();
+      if(!validD(e.date)){failed.push(e.title);continue}
+      if(e.start&&!validHM(e.start)) e.start=''; if(e.end&&!validHM(e.end)) e.end='';
+      try{
+        const r=e.gid?await gapi('PATCH',`/calendars/${enc(cal)}/events/${enc(e.gid)}`,forPatch(gEventBody(e))):await gapi('POST',`/calendars/${enc(cal)}/events`,gEventBody(e));
+        if(r){e.gid=r.id;e.gUpdated=r.updated} e.calId=cal; e.sync='ok'; delete e.syncErr; up++; save();
+      }catch(err){ if(err.message==='auth') throw err; e.syncErr=err.message; failed.push(e.title); }
     }
     // 3. envoi des tâches
     for(const x of S.tasks.filter(x=>x.sync==='pending')){
       const cal=x.calId||target;
       if(!x.date||x.noSync||!S.settings.pushTasks){ if(x.gid){await gapi('DELETE',`/calendars/${enc(cal)}/events/${enc(x.gid)}`);x.gid=null;up++} x.sync=null; continue; }
-      const r=x.gid?await gapi('PATCH',`/calendars/${enc(cal)}/events/${enc(x.gid)}`,gTaskBody(x)):await gapi('POST',`/calendars/${enc(cal)}/events`,gTaskBody(x));
-      if(r){x.gid=r.id;x.gUpdated=r.updated} x.calId=cal; x.sync='ok'; up++; save();
+      if(!validD(x.date)){failed.push(x.title);continue}
+      if(x.time&&!validHM(x.time)) x.time='';
+      try{
+        const r=x.gid?await gapi('PATCH',`/calendars/${enc(cal)}/events/${enc(x.gid)}`,forPatch(gTaskBody(x))):await gapi('POST',`/calendars/${enc(cal)}/events`,gTaskBody(x));
+        if(r){x.gid=r.id;x.gUpdated=r.updated} x.calId=cal; x.sync='ok'; delete x.syncErr; up++; save();
+      }catch(err){ if(err.message==='auth') throw err; x.syncErr=err.message; failed.push(x.title); }
     }
     // 4. réception depuis Google
     const tMin=new Date();tMin.setDate(tMin.getDate()-30);tMin.setHours(0,0,0,0);
@@ -1087,7 +1099,8 @@ async function sync(interactive){
       S.tasks.forEach(x=>{if(x.gid&&x.calId===c.id&&x.sync!=='pending'&&x.date>=minD&&x.date<=maxD&&!seen.has(x.gid)){x.gid=null;x.sync=null;x.noSync=true}});
     }
     S.settings.lastSync=Date.now(); save();
-    if(interactive||up||down) toast(`🔄 Synchronisé · ${up} envoyé${up>1?'s':''}, ${down} reçu${down>1?'s':''}`);
+    if(failed.length) toast(`⚠️ ${plural(failed.length,'élément non synchronisé','éléments non synchronisés')} : « ${failed[0]} »${failed.length>1?'…':''}. Ouvrez-le pour vérifier date et heure.`);
+    else if(interactive||up||down) toast(`🔄 Synchronisé · ${up} envoyé${up>1?'s':''}, ${down} reçu${down>1?'s':''}`);
   }catch(err){
     if(err.message==='auth'){ if(interactive) toast('Session Google expirée : reconnectez-vous'); }
     else toast('⚠️ '+err.message);
