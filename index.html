@@ -355,7 +355,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.5.3';
+const VERSION='3.5.4';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -437,7 +437,7 @@ function defaults(){
   return {tasks:[],events:[],items:[],notes:[],reminders:[],habits:[],ideas:[],loans:[],syncDeletes:[],draft:'',
     folders:[tr,f('Conseil des maîtres',tr.id,3,'🧑‍🏫'),f('Conseil du vendredi',tr.id,5,'🗓️'),f("Conseil d'école",tr.id,1,'🏫'),f('Conseil de cycle',tr.id,4,'🔄'),f('Achat pour la classe',tr.id,6,'🛒'),f('Travaux',null,2,'🔨')],
     settings:{navPos:'bottom',theme:'dark',accent:'nuit',tabOrder:['jour','taches','todo','agenda','notes'],dayStart:'08:00',dayEnd:'20:00',defaultDuration:30,
-      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'p_theta',bgBright:100,bgVeil:45,bgBlur:0,bgVer:0,font:'system',palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
+      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'p_theta',bgBright:100,bgVeil:45,bgBlur:0,bgVer:0,font:'system',homeAdd:false,homePhoto:false,homeKeyboard:false,palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
 }
 function load(){
   try{const raw=localStorage.getItem(KEY);S=raw?JSON.parse(raw):defaults()}catch(e){S=defaults()}
@@ -844,8 +844,8 @@ function micDock(mode,fab){
   const on=!!mode&&recOn&&recMode===mode, sr=!!SRc();
   const plus=fab&&!on?`<button class="dockplus" data-a="${fab}" aria-label="Ajouter">+</button>`:'';
   if(!mode) return `<div class="micdock"><div class="dockrow">${plus}</div></div>`;
-  const pills=mode==='jour'&&!on?`<div class="dockpills"><button class="dockpill" data-a="slotEvent" data-v="">＋ Événement</button><button class="dockpill" data-a="slotTask" data-v="">＋ Tâche</button></div>`:'';
-  const ex={jour:[['dictPhoto','📸','Photo'],['typeNote','⌨️','Écrire']],task:[['taskPhoto','📸','Photo → tâche']],item:[['notePhoto','📸','Photo → note']],event:[]}[mode]||[];
+  const pills=mode==='jour'&&!on&&S.settings.homeAdd?`<div class="dockpills"><button class="dockpill" data-a="slotEvent" data-v="">＋ Événement</button><button class="dockpill" data-a="slotTask" data-v="">＋ Tâche</button></div>`:'';
+  const ex={jour:[...(S.settings.homePhoto?[['dictPhoto','📸','Photo']]:[]),...(S.settings.homeKeyboard?[['typeNote','⌨️','Écrire']]:[])],task:[['taskPhoto','📸','Photo → tâche']],item:[['notePhoto','📸','Photo → note']],event:[]}[mode]||[];
   return `${on?`<div class="livebox"><b>🎙️ Thêta écoute…</b><div id="dictLive" class="live"></div><small>Touchez ⏹ quand vous avez fini</small></div>`:''}<div class="micdock">${pills}<div class="dockrow"><button id="micBtn" class="fabmic ${on?'rec':''}" data-a="mic" data-v="${mode}" ${sr?'':'disabled'} aria-label="${on?'Terminer':'Thêta écoute'}">${on?'⏹':'🎙️'}</button>${plus}${on?'':ex.map(([a,i,l])=>`<button class="dockbtn" data-a="${a}" aria-label="${l}">${i}</button>`).join('')}</div></div>`;
 }
 function dictCard(mode){
@@ -951,6 +951,10 @@ SUBS.reglages=()=>{
   <div class="range"><span class="small">Flou&nbsp;</span><input type="range" min="0" max="16" step="1" value="${s.bgBlur}" data-r="bgBlur" aria-label="Flou"><b>${s.bgBlur} px</b></div>
   <div class="range"><span class="small">Luminosité</span><input type="range" min="40" max="140" step="5" value="${+s.bgBright||100}" data-r="bgBright" aria-label="Luminosité"><b>${+s.bgBright||100} %</b></div>
   <div class="small muted" style="margin-top:8px">Le voile atténue l'image pour garder les textes lisibles.</div></div>`;
+  html+=sec('Boutons de l\'accueil')+`<div class="card"><div class="small muted" style="margin-bottom:4px">À côté du micro, en bas à gauche de l'écran Jour :</div>
+  <div class="srow"><span class="grow">＋ Événement et ＋ Tâche<div class="small muted">Au-dessus du micro</div></span><input type="checkbox" class="sw" data-c="setting" data-f="homeAdd" ${s.homeAdd?'checked':''}></div>
+  <div class="srow"><span class="grow">📸 Prendre une photo</span><input type="checkbox" class="sw" data-c="setting" data-f="homePhoto" ${s.homePhoto?'checked':''}></div>
+  <div class="srow"><span class="grow">⌨️ Écrire une note</span><input type="checkbox" class="sw" data-c="setting" data-f="homeKeyboard" ${s.homeKeyboard?'checked':''}></div></div>`;
   html+=sec('Ordre des onglets')+`<div class="card"><div class="taborder" id="tabOrder">${s.tabOrder.map((k,i)=>`<div class="tabtile handle" data-id="${k}"><span>${tabIcon(k)}</span><small>${TABS[k][1]}</small>${i===0?'<em>ouverture</em>':''}</div>`).join('')}</div><div class="small muted" style="margin-top:8px">Faites glisser un onglet pour le déplacer. Le premier s'ouvre au démarrage.</div></div>`;
   html+=sec('Icônes de l\'application')+`<div class="card"><div class="iconrow">${['jour','taches','todo','agenda'].map(k=>`<button class="icsel ${iconEdit===k?'on':''}" data-a="iconEdit" data-id="${k}"><span>${tabIcon(k)}</span><small>${TABS[k][1]}</small></button>`).join('')}</div>${iconEdit?`<div class="small muted" style="margin:12px 0 2px">Choisissez l'icône de « ${TABS[iconEdit][1]} » :</div><div class="iconpick">${(TAB_ICONS[iconEdit]||[]).map(ic=>`<button type="button" class="${tabIcon(iconEdit)===ic?'on':''}" data-a="setTabIcon" data-id="${iconEdit}|${ic}">${ic}</button>`).join('')}</div>`:'<div class="small muted" style="margin-top:10px">Touchez une icône pour voir les propositions.</div>'}</div>`;
   html+=sec('Organisation de la journée')+`<div class="card"><label class="fld"><span>Vacances scolaires affichées dans l'agenda</span><select data-c="setting" data-f="zone">${[['','Ne pas afficher'],['Zone A','Zone A'],['Zone B','Zone B'],['Zone C','Zone C'],['Corse','Corse']].map(([v,l])=>`<option value="${v}" ${s.zone===v?'selected':''}>${l}</option>`).join('')}</select></label><div class="row2"><label class="fld"><span>Début de journée</span><input type="time" data-c="setting" data-f="dayStart" value="${s.dayStart}"></label><label class="fld"><span>Fin de journée</span><input type="time" data-c="setting" data-f="dayEnd" value="${s.dayEnd}"></label></div><label class="fld"><span>Durée par défaut d'une tâche</span><select data-c="setting" data-f="defaultDuration">${[15,30,45,60,90,120].map(v=>`<option value="${v}" ${+s.defaultDuration===v?'selected':''}>${fmtDur(v)}</option>`).join('')}</select></label></div>`;
