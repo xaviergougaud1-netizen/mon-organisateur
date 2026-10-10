@@ -275,6 +275,7 @@ body.navtop .livebox{bottom:calc(96px + env(safe-area-inset-bottom))}
 .item.top{align-items:flex-start}.item.top .chk{margin-top:1px}.item.top .handle{padding-top:2px}
 .bgt.match{border-color:color-mix(in srgb,var(--a1) 60%,transparent)}
 .bgt.match::before{content:"Assorti";position:absolute;top:6px;left:6px;font-size:10px;font-weight:800;background:#fff;color:#1a1a1a;border-radius:6px;padding:1px 6px;z-index:1}
+.dockplus{width:50px;height:50px;border-radius:50%;border:0;font-size:28px;line-height:1;color:#fff;background:linear-gradient(135deg,var(--a2),var(--a1));box-shadow:0 8px 20px color-mix(in srgb,var(--a2) 40%,transparent)}
 /* Forms */
 .fld{display:block;margin:10px 0}
 .fld>span{display:block;font-size:12.5px;font-weight:650;color:var(--muted);margin:0 0 5px 2px}
@@ -350,7 +351,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.5.0';
+const VERSION='3.5.1';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -554,7 +555,7 @@ function render(){
   $('#topActions').innerHTML=r.actions||'';
   document.body.classList.toggle('vjour',view==='jour'&&!sub);
   $('#main').innerHTML=r.html;
-  $('#dock').innerHTML=(r.fab?`<button class="fab" data-a="${r.fab}" aria-label="Ajouter">+</button>`:'')+(r.mic?micDock(r.mic):'');
+  $('#dock').innerHTML=(r.mic||r.fab)?micDock(r.mic,r.fab):'';
   if(r.after) r.after();
   if(recOn) showLive();
   $$('img[data-img]').forEach(async im=>{const u=await imgURL(im.dataset.img);if(u)im.src=u});
@@ -731,7 +732,7 @@ VIEWS.jour=()=>{
   if(monthT.length) html+=sec('🗓️ Ce mois-ci · '+fmtMonth(tm),monthT.length)+`<div class="list">${monthT.map(taskRow).join('')}</div>`;
   if(isToday&&S.habits.length) html+=sec('Habitudes')+`<div class="hchips">${S.habits.map(hb=>`<button class="chip ${hb.log[t]?'on':''}" data-a="habitDay" data-id="${hb.id}" data-v="${t}">${esc(hb.emoji||'⭐')} ${esc(hb.name)}</button>`).join('')}</div>`;
   if(nAcc) html+=sec(isToday?'Accompli aujourd\'hui':'Accompli',nAcc)+`<div class="list">${accT.map(taskRow).join('')}${accR.map(r=>remRow(r,t)).join('')}${accI.map(itemDoneRow).join('')}</div><p class="small muted" style="text-align:center;margin:8px 0 0">Touchez une coche pour annuler.</p>`;
-  return {title:isToday?'Aujourd\'hui':jourOff===1?'Demain':cap(JOURS[D.getDay()])+' '+D.getDate(),html,mic:'jour'};
+  return {title:isToday?'Aujourd\'hui':jourOff===1?'Demain':cap(JOURS[D.getDay()])+' '+D.getDate(),html,mic:'jour',fab:'quickAdd'};
 };
 
 /* ---------- Tâches ---------- */
@@ -835,10 +836,12 @@ function reviewCards(){
   return S.notes.filter(n=>n.status==='review').map(n=>{const P=n.props.filter(p=>p.status==='pending');
     return `<div class="card" style="margin-bottom:12px"><div class="raw">« ${esc(n.text)} »</div>${P.map(p=>propCard(n,p)).join('')}${P.length>1?`<div class="pbtns" style="margin-top:12px"><button class="btn sm ghost" data-a="noteDiscard" data-id="${n.id}">Tout ignorer</button><button class="btn sm primary" data-a="noteAll" data-id="${n.id}">✓ Tout valider (${P.length})</button></div>`:''}</div>`}).join('');
 }
-function micDock(mode){
-  const on=recOn&&recMode===mode, sr=!!SRc();
+function micDock(mode,fab){
+  const on=!!mode&&recOn&&recMode===mode, sr=!!SRc();
+  const plus=fab&&!on?`<button class="dockplus" data-a="${fab}" aria-label="Ajouter">+</button>`:'';
+  if(!mode) return `<div class="micdock">${plus}</div>`;
   const ex={jour:[['dictPhoto','📸','Photo'],['typeNote','⌨️','Écrire']],task:[['taskPhoto','📸','Photo → tâche']],item:[['notePhoto','📸','Photo → note']],event:[]}[mode]||[];
-  return `${on?`<div class="livebox"><b>🎙️ Thêta écoute…</b><div id="dictLive" class="live"></div><small>Touchez ⏹ quand vous avez fini</small></div>`:''}<div class="micdock"><button id="micBtn" class="fabmic ${on?'rec':''}" data-a="mic" data-v="${mode}" ${sr?'':'disabled'} aria-label="${on?'Terminer':'Thêta écoute'}">${on?'⏹':'🎙️'}</button>${on?'':ex.map(([a,i,l])=>`<button class="dockbtn" data-a="${a}" aria-label="${l}">${i}</button>`).join('')}</div>`;
+  return `${on?`<div class="livebox"><b>🎙️ Thêta écoute…</b><div id="dictLive" class="live"></div><small>Touchez ⏹ quand vous avez fini</small></div>`:''}<div class="micdock"><button id="micBtn" class="fabmic ${on?'rec':''}" data-a="mic" data-v="${mode}" ${sr?'':'disabled'} aria-label="${on?'Terminer':'Thêta écoute'}">${on?'⏹':'🎙️'}</button>${plus}${on?'':ex.map(([a,i,l])=>`<button class="dockbtn" data-a="${a}" aria-label="${l}">${i}</button>`).join('')}</div>`;
 }
 function dictCard(mode){
   const sr=!!SRc(), on=recOn&&recMode===mode;
@@ -1806,6 +1809,7 @@ const A={
   taskPhoto(){ imgTarget={newTask:true}; $('#fileCam').click(); },
   notePhoto(){ imgTarget={folder:todoFolder,text:''}; $('#fileCam').click(); },
   newItem(){ itemSheet(null); },
+  quickAdd(){ openSheet('Ajouter',`<div class="menu" style="grid-template-columns:1fr 1fr"><button type="button" data-a="slotTask" data-v=""><span>✅</span>Une tâche</button><button type="button" data-a="slotEvent" data-v=""><span>📅</span>Un événement</button><button type="button" data-a="newReminder"><span>🔔</span>Un rappel</button><button type="button" data-a="newItem"><span>📝</span>Une note</button></div>`); },
   dictPhoto(){ imgTarget={share:true}; $('#fileCam').click(); },
   typeNote(){
     openSheet('Écrire une note',fld('Une idée par ligne',`<textarea name="text" required autofocus style="min-height:150px" placeholder="Conseil de cycle jeudi 17h&#10;Acheter des feutres pour la classe&#10;Rappelle-moi d'appeler maman demain soir">${esc(S.draft||'')}</textarea>`),
