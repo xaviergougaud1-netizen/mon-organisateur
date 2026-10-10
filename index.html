@@ -194,16 +194,19 @@ body.hasbg .dchip:not(.on){background:color-mix(in srgb,var(--card) 80%,transpar
 .holi small{display:block;font-weight:500;opacity:.8;font-size:12.5px}
 /* v3.1 */
 .hero-row{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
-.hstrip{display:flex;gap:3px}
-.hd{width:31px;border:0;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;padding:3px 0 2px;display:flex;flex-direction:column;align-items:center;font-size:10px;line-height:1.15;font-weight:700}
-.hd b{font-size:14px}.hd i{width:4px;height:4px;border-radius:50%;background:currentColor;margin-top:1px}
+.hstrip{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px}
+.hd{width:auto;border:0;border-radius:10px;background:rgba(255,255,255,.15);color:#fff;padding:5px 0 4px;display:flex;flex-direction:column;align-items:center;font-size:11px;line-height:1.15;font-weight:700}
+.hd b{font-size:16px}.hd i{width:4px;height:4px;border-radius:50%;background:currentColor;margin-top:1px}
 .hd.on{background:#fff;color:var(--a2)}.hd.hol:not(.on){box-shadow:inset 0 -3px 0 #ffd43b}
 .hero .hero-top{margin-bottom:10px;align-items:center}
 body.vjour #main{touch-action:pan-y}
 #main{will-change:transform}
 .chips.fit{display:grid;grid-template-columns:repeat(var(--n),1fr);overflow:visible}
-.chips.fit .chip{padding:7px 2px;font-size:13px;text-align:center;min-width:0}
-.dictbtns{display:flex;flex-direction:column;gap:6px}
+.chips.fit .chip{padding:7px 1px;font-size:12.5px;text-align:center;min-width:0}
+.dictbtns{display:flex;gap:6px}
+.dict.mini{margin:12px 0;padding:8px 10px;gap:10px}.dict.mini .mic{width:42px;height:42px;font-size:19px;box-shadow:0 5px 14px color-mix(in srgb,var(--a1) 40%,transparent)}
+.dict.mini .dict-t{font-size:15px}.dict.mini .small{font-size:12px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical;overflow:hidden}
+.dict.mini.on .small{-webkit-line-clamp:2}
 .subs{margin-top:6px;display:flex;flex-direction:column;gap:2px}
 .sub{display:flex;align-items:center;gap:8px;font-size:14px;padding:2px 0}
 .sub.done span{text-decoration:line-through;color:var(--muted)}
@@ -227,15 +230,18 @@ body.vjour #main{touch-action:pan-y}
 /* Journée 8h-20h */
 .tl{position:relative;margin:4px 0 8px}
 .tl-h{position:absolute;left:0;right:0;border-top:1px solid var(--line);height:0}
-.tl-h span{position:absolute;top:-8px;left:0;font-size:11px;font-weight:700;color:var(--muted);width:36px}
-.tl-free{position:absolute;left:44px;right:4px;border:1.5px dashed color-mix(in srgb,var(--a1) 45%,transparent);background:color-mix(in srgb,var(--a1) 7%,transparent);border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:3px 8px;overflow:hidden;cursor:pointer}
-.tl-fl{font-size:12px;color:var(--muted)}
-.tl-sug{border:0;border-radius:8px;padding:3px 9px;font-size:12px;font-weight:650;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.tl-ev{position:absolute;border-radius:10px;padding:3px 8px;color:#fff;background:linear-gradient(135deg,var(--a1),var(--a2));overflow:hidden;box-shadow:0 3px 10px rgba(0,0,0,.25);font-size:12.5px;line-height:1.25;cursor:pointer;z-index:2}
-.tl-ev b{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.tl-ev small{opacity:.88;font-size:11px;white-space:nowrap}
+.tl-h span{position:absolute;top:-7px;left:0;font-size:10.5px;font-weight:700;color:var(--muted);width:36px}
+.tl-free{position:absolute;left:44px;right:4px;z-index:1;border:1.5px dashed color-mix(in srgb,var(--a1) 45%,transparent);background:color-mix(in srgb,var(--a1) 7%,transparent);border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:3px 8px;overflow:hidden;cursor:pointer}
+.tl-fl{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tl-sug{border:0;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:650;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tl-ev{position:absolute;border-radius:8px;padding:2px 6px;color:#fff;background:linear-gradient(135deg,var(--a1),var(--a2));overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.22);font-size:11.5px;line-height:1.2;cursor:pointer;z-index:2;border:1px solid rgba(255,255,255,.35)}
+.tl-ev b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:700;word-break:break-word}
+.tl-ev.one b{display:block;white-space:nowrap;text-overflow:ellipsis}.tl-ev small{display:block;opacity:.88;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl-ev.one{display:flex;align-items:center;gap:5px;padding:0 6px}.tl-ev.one b{flex:0 1 auto;min-width:0}.tl-ev.one small{flex:1 1 0;min-width:0}
 .tl-ev.task{background:var(--card);color:var(--text);border:1.5px solid var(--a1)}
 .tl-now{position:absolute;left:38px;right:0;height:2px;background:#ff5d6c;z-index:3;pointer-events:none}
 .tl-now::before{content:"";position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:#ff5d6c}
+.secbtn{padding:4px 9px!important;font-size:12px!important;text-transform:none;letter-spacing:0;border-radius:9px!important;color:var(--text)}
 /* Forms */
 .fld{display:block;margin:10px 0}
 .fld>span{display:block;font-size:12.5px;font-weight:650;color:var(--muted);margin:0 0 5px 2px}
@@ -310,7 +316,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.1.0';
+const VERSION='3.2.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -365,7 +371,7 @@ function defaults(){
   return {tasks:[],events:[],items:[],notes:[],reminders:[],habits:[],ideas:[],loans:[],syncDeletes:[],draft:'',
     folders:[tr,f('Conseil des maîtres',tr.id,3,'🧑‍🏫'),f('Conseil du vendredi',tr.id,5,'🗓️'),f("Conseil d'école",tr.id,1,'🏫'),f('Conseil de cycle',tr.id,4,'🔄'),f('Achat pour la classe',tr.id,6,'🛒'),f('Travaux',null,2,'🔨')],
     settings:{navPos:'bottom',theme:'dark',accent:'nuit',tabOrder:['jour','taches','todo','agenda','notes'],dayStart:'08:00',dayEnd:'20:00',defaultDuration:30,
-      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'brume',bgVeil:45,bgBlur:0,bgVer:0,font:'system',navLift:18,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
+      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'brume',bgVeil:45,bgBlur:0,bgVer:0,font:'system',navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
 }
 function load(){
   try{const raw=localStorage.getItem(KEY);S=raw?JSON.parse(raw):defaults()}catch(e){S=defaults()}
@@ -375,6 +381,7 @@ function normalizeState(){
   const d=defaults();
   for(const k in d) if(S[k]===undefined) S[k]=d[k];
   S.settings={...d.settings,...S.settings};
+  if(!S.settings._lift2){ if(+S.settings.navLift===18) S.settings.navLift=4; S.settings._lift2=true; }
   const order=S.settings.tabOrder.filter(k=>TABS[k]);
   for(const k of Object.keys(TABS)) if(!order.includes(k)) order.push(k);
   S.settings.tabOrder=order;
@@ -440,7 +447,7 @@ let view='jour', sub=null, todoFolder=null, taskFilter='todo', libTab='ideas', l
 
 /* ================= Rendu ================= */
 const VIEWS={}, SUBS={};
-const sec=(t,n,extra='')=>`<div class="sec">${t}${n!=null?`<span class="n">${n}</span>`:''}${extra}</div>`;
+const sec=(t,n,extra='')=>`<div class="sec">${t}${n!=null&&n!==''?`<span class="n">${n}</span>`:''}${extra}</div>`;
 const empty=(ic,t,s,mini)=>`<div class="empty ${mini?'mini':''}">${ic?`<div class="big">${ic}</div>`:''}<b>${t}</b>${s||''}</div>`;
 const chips=(opts,cur,act,fit)=>`<div class="chips ${fit?'fit':''}" ${fit?`style="--n:${opts.length}"`:''}>${opts.map(([v,l])=>`<button class="chip ${v===cur?'on':''}" data-a="${act}" data-id="${v}">${l}</button>`).join('')}</div>`;
 const syncTag=o=>o.sync==='pending'?'<span class="tag sync">⏳ à synchroniser</span>':(o.gid?'<span class="tag ok">✓ Google</span>':'');
@@ -520,6 +527,7 @@ function rrule(r){
   return null;
 }
 const curMonth=()=>today().slice(0,7);
+const nextFriday=()=>{const t=today(),d=parseD(t).getDay();return addDays(t,d<5?5-d:12-d)};
 const fmtMonth=m=>{if(!m)return '';const[y,mo]=m.split('-').map(Number);return cap(MOIS_A[mo-1])+(y!==new Date().getFullYear()?' '+y:'')};
 const remDone=(r,d)=>r.recur&&r.recur!=='none'?r.lastDone===d:!!r.done;
 const remindersOn=d=>S.reminders.filter(r=>remOccurs(r,d)).sort(byTime);
@@ -592,7 +600,7 @@ function dayTimeline(t,isToday,sug){
            ...tks.map(x=>{const s0=toMin(x.time);return{s:s0,e:s0+Math.max(15,+x.duration||30),k:'task',o:x}})].sort((a,b)=>a.s-b.s||b.e-a.e);
   let H0=toMin(S.settings.dayStart||'08:00'), H1=toMin(S.settings.dayEnd||'20:00');
   B.forEach(b=>{H0=Math.min(H0,Math.floor(b.s/60)*60);H1=Math.max(H1,Math.min(1440,Math.ceil(b.e/60)*60))});
-  const PX=.8, y=m=>(m-H0)*PX;
+  const PX=1, y=m=>(m-H0)*PX;
   let cluster=[],clEnd=-1; const colsEnd=[];
   const finish=()=>{const n=Math.max(1,...cluster.map(b=>b.col+1));cluster.forEach(b=>b.n=n);cluster=[];colsEnd.length=0};
   B.forEach(b=>{if(cluster.length&&b.s>=clEnd)finish();let c=colsEnd.findIndex(e=>e<=b.s);if(c<0){c=colsEnd.length;colsEnd.push(b.e)}else colsEnd[c]=b.e;b.col=c;cluster.push(b);clEnd=Math.max(clEnd,b.e)});
@@ -607,7 +615,8 @@ function dayTimeline(t,isToday,sug){
     h+=`<div class="tl-free" data-a="slotNew" data-v="${fromMin(a)}" style="top:${y(a)+1}px;height:${(b-a)*PX-2}px"><span class="tl-fl">Libre · ${fromMin(a)}–${fromMin(b===1440?1439:b)} · <b>${fmtDur(b-a)}</b></span>${sg&&(b-a)*PX>=44?`<button class="tl-sug" data-a="plan" data-id="${sg.task.id}" data-v="${fromMin(sg.start)}">💡 Caser « ${esc(sg.task.title)} »</button>`:''}</div>`}
   for(const b of B){
     const c=b.k==='ev'?((S.settings.calendars.find(c=>c.id===b.o.calId)||{}).color||b.o.color||''):'';
-    h+=`<div class="tl-ev ${b.k}" data-a="${b.k==='ev'?'editEvent':'editTask'}" data-id="${b.o.id}" style="top:${y(b.s)}px;height:${Math.max(22,(b.e-b.s)*PX-2)}px;left:calc(44px + (100% - 48px)*${b.col}/${b.n});width:calc((100% - 48px)/${b.n} - 4px);${c?`background:${esc(c)};`:''}"><b>${b.k==='task'?'✅ ':''}${esc(b.o.title)}</b><small>${fromMin(b.s)}–${fromMin(Math.min(b.e,1439))}${b.k==='ev'&&b.o.place?' · 📍 '+esc(b.o.place):''}</small></div>`;
+    const hh=Math.max(20,(b.e-b.s)*PX-2), one=hh<34;
+    h+=`<div class="tl-ev ${b.k} ${one?'one':''}" data-a="${b.k==='ev'?'editEvent':'editTask'}" data-id="${b.o.id}" style="top:${y(b.s)}px;height:${hh}px;left:calc(44px + (100% - 48px)*${b.col}/${b.n});width:calc((100% - 48px)/${b.n} - 3px);${b.n>2?'padding:2px 4px;font-size:10.5px;':''}${c?`background:${esc(c)};`:''}"><b>${b.k==='task'?'✅ ':''}${esc(b.o.title)}</b><small>${fromMin(b.s)}–${fromMin(Math.min(b.e,1439))}${b.k==='ev'&&b.o.place?' · 📍 '+esc(b.o.place):''}</small></div>`;
   }
   if(isToday&&nowM>=H0&&nowM<=H1) h+=`<div class="tl-now" style="top:${y(nowM)}px"></div>`;
   return (allDay.length?`<div class="list" style="margin-bottom:10px">${allDay.map(e=>eventRow(e,t)).join('')}</div>`:'')+`<div class="tl" style="height:${(H1-H0)*PX+6}px">${h}</div>`;
@@ -629,7 +638,7 @@ VIEWS.jour=()=>{
   const hasData=S.tasks.length+S.items.length+S.events.length>5;
   const D=parseD(t), label=isToday?hello+' 👋':jourOff===1?'Demain':cap(JOURS[D.getDay()]);
   const subl=[all.length?`${dn} / ${plural(all.length,'tâche')} accomplie${dn>1?'s':''}`:'',late.length?`${late.length} en retard`:'',evs.length?plural(evs.length,'événement'):'',rems.length?plural(rems.length,'rappel'):''].filter(Boolean).join(' · ')||(isToday?'Rien de prévu : profitez-en':'Rien de prévu ce jour-là');
-  let html=`<div class="hero"><div class="hero-row"><div class="hero-date">${cap(JOURS[D.getDay()])} ${D.getDate()} ${MOIS_A[D.getMonth()]}</div>${miniStrip(T)}</div><div class="hero-top"><div class="hero-hello">${label}</div>${all.length?`<div class="hero-pct">${pct}%</div>`:''}</div>${all.length?`<div class="progress"><i style="width:${pct}%"></i></div>`:''}<div class="hero-sub">${subl}</div></div>`;
+  let html=`<div class="hero"><div class="hero-date">${cap(JOURS[D.getDay()])} ${D.getDate()} ${MOIS_A[D.getMonth()]}</div><div class="hero-hello">${label}</div><div class="hero-sub">${subl}</div>${miniStrip(T)}</div>`;
   const hol=holidayOn(t); if(hol) html+=`<div style="margin-top:12px">${holiHTML(hol)}</div>`;
   html+=dictCard('jour');
   const nrev=S.notes.filter(n=>n.status==='review').length;
@@ -637,7 +646,7 @@ VIEWS.jour=()=>{
   if(isToday&&hasData&&!S.settings.driveFileId&&(!S.settings.lastBackup||Date.now()-S.settings.lastBackup>14*864e5)) html+=`<button class="banner" data-a="export">💾 Pensez à sauvegarder vos données<span class="grow"></span>Exporter</button>`;
   if(open.length) html+=sec(isToday?'Tâches du jour':'Tâches',open.length)+`<div class="list">${open.map(taskRow).join('')}</div>`;
   if(late.length||lateR.length) html+=sec('En retard',late.length+lateR.length)+`<div class="list">${late.map(taskRow).join('')}${lateR.map(remRow).join('')}</div>`;
-  html+=sec('Ma journée')+dayTimeline(t,isToday,sug);
+  html+=sec('Ma journée','',`<span class="grow"></span><button class="btn sm ghost secbtn" data-a="slotEvent" data-v="">＋ Événement</button><button class="btn sm ghost secbtn" data-a="slotTask" data-v="">＋ Tâche</button>`)+dayTimeline(t,isToday,sug);
   if(sug.length>1) html+=`<button class="btn sm primary block" data-a="planAll" style="margin-top:0">✨ Caser automatiquement ${plural(sug.length,'tâche')}</button>`;
   if(rems.length) html+=sec('Rappels',rems.length)+`<div class="list">${rems.map(r=>remRow(r,t)).join('')}</div>`;
   if(monthT.length) html+=sec('🗓️ Ce mois-ci · '+fmtMonth(tm),monthT.length)+`<div class="list">${monthT.map(taskRow).join('')}</div>`;
@@ -649,11 +658,15 @@ VIEWS.jour=()=>{
 /* ---------- Tâches ---------- */
 VIEWS.taches=()=>{
   const t=today(), cm=curMonth();
-  let html=dictCard('task')+chips([['todo','À faire'],['today','Aujourd\'hui'],['done','Faites'],['all','Toutes']],taskFilter,'taskFilter',true);
+  const fri=nextFriday();
+  let html=dictCard('task')+chips([['todo','À faire'],['today','Aujourd\'hui'],['fri','Ven. '+parseD(fri).getDate()],['done','Faites'],['all','Toutes']],taskFilter,'taskFilter',true);
   let L=S.tasks.slice();
   if(taskFilter==='todo') L=L.filter(x=>!x.done);
   if(taskFilter==='today') L=L.filter(x=>x.date===t||(!x.done&&((x.date&&x.date<t)||(x.month&&x.month<=cm))));
   if(taskFilter==='done') L=L.filter(x=>x.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
+  if(taskFilter==='fri'){ L=L.filter(x=>x.date===fri).sort((a,b)=>a.done-b.done||byTime(a,b)||PRIO[a.priority]-PRIO[b.priority]);
+    html+=sec('📅 '+fmtLong(fri),L.length||null)+(L.length?`<div class="list">${L.map(taskRow).join('')}</div>`:empty('','Rien de prévu vendredi',`<div><button class="btn sm primary" data-a="newTaskFri" style="margin-top:8px">+ Tâche pour vendredi</button></div>`,1));
+    return {title:'Tâches',html,fab:'newTaskFri'}; }
   if(!L.length) html+=empty('✅','Rien ici','Ajoutez une tâche avec le bouton +, ou dictez avec Thêta écoute.');
   else if(taskFilter==='done') html+=`<div class="list">${L.map(taskRow).join('')}</div>`;
   else{
@@ -747,8 +760,8 @@ function reviewCards(){
 }
 function dictCard(mode){
   const sr=!!SRc(), on=recOn&&recMode===mode;
-  const L={jour:'Tâche, rendez-vous, rappel, note… je propose où ranger.',task:'Chaque idée devient une tâche (date et heure comprises).',item:'Chaque phrase devient un élément de ce dossier.'}[mode];
-  return `<div class="card dict ${mode!=='jour'?'mini':''} ${on?'on':''}"><button id="micBtn" class="mic ${on?'rec':''}" data-a="mic" data-v="${mode}" ${sr?'':'disabled'} aria-label="${on?'Terminer':'Thêta écoute'}">${on?'⏹':'🎙️'}</button><div class="grow"><div class="dict-t" ${on?'id="dictLive"':''}>${on?'Thêta écoute…':'Thêta écoute'}</div><div class="small muted">${!sr?'Dictée disponible dans Chrome.':on?'Touchez ⏹ quand vous avez fini.':L}</div></div>${on||mode!=='jour'?'':'<div class="dictbtns"><button class="icon-btn" data-a="dictPhoto" aria-label="Prendre une photo">📸</button><button class="icon-btn" data-a="typeNote" aria-label="Écrire">⌨️</button></div>'}</div>`;
+  const L={jour:'Je range tâches, rendez-vous, rappels, notes',task:'Chaque idée devient une tâche (date et heure comprises).',item:'Chaque phrase devient un élément de ce dossier.'}[mode];
+  return `<div class="card dict mini ${on?'on':''}"><button id="micBtn" class="mic ${on?'rec':''}" data-a="mic" data-v="${mode}" ${sr?'':'disabled'} aria-label="${on?'Terminer':'Thêta écoute'}">${on?'⏹':'🎙️'}</button><div class="grow"><div class="dict-t" ${on?'id="dictLive"':''}>${on?'Thêta écoute…':'Thêta écoute'}</div><div class="small muted">${!sr?'Dictée disponible dans Chrome.':on?'Touchez ⏹ quand vous avez fini.':L}</div></div>${on||mode!=='jour'?'':'<div class="dictbtns"><button class="icon-btn sm" data-a="dictPhoto" aria-label="Prendre une photo">📸</button><button class="icon-btn sm" data-a="typeNote" aria-label="Écrire">⌨️</button></div>'}</div>`;
 }
 SUBS.notes=()=>{
   const sr=!!(window.SpeechRecognition||window.webkitSpeechRecognition);
@@ -1621,6 +1634,7 @@ const A={
   sync(){ sync(true); },
   // Tâches
   newTask(){ taskSheet(null); },
+  newTaskFri(){ taskSheet(null,{date:nextFriday()}); },
   editTask(id){ const x=S.tasks.find(x=>x.id===id); if(x) taskSheet(x); },
   toggleTask(id){
     const x=S.tasks.find(x=>x.id===id); if(!x) return; x.done=!x.done; x.doneAt=x.done?Date.now():null;
@@ -1663,8 +1677,8 @@ const A={
   },
   pickPlace(id,el){ const i=$('#placeIn'); if(i) i.value=el.dataset.v; const b=$('#placeSug'); if(b) b.innerHTML=''; placeTok=null; },
   slotNew(id,el){ const tm=el.dataset.v; openSheet('Créneau libre · '+tm,`<div class="menu" style="grid-template-columns:1fr 1fr"><button type="button" data-a="slotTask" data-v="${tm}"><span>✅</span>Une tâche</button><button type="button" data-a="slotEvent" data-v="${tm}"><span>📅</span>Un événement</button></div>`); },
-  slotTask(id,el){ taskSheet(null,{date:addDays(today(),jourOff),time:el.dataset.v}); },
-  slotEvent(id,el){ eventSheet(null,{date:addDays(today(),jourOff),start:el.dataset.v}); },
+  slotTask(id,el){ taskSheet(null,{date:addDays(today(),jourOff),time:el.dataset.v||''}); },
+  slotEvent(id,el){ eventSheet(null,{date:addDays(today(),jourOff),start:el.dataset.v||''}); },
   subAdd(key){ subAddFor=key; render(); const i=$('#subIn'); if(i) i.focus(); },
   subToggle(key){ const[k,id,sid]=key.split(':'); const o=subObj(k,id); const st=o&&(o.steps||[]).find(x=>x.id===sid); if(!st) return; st.done=!st.done; save(); render(); },
   subDel(key){ const[k,id,sid]=key.split(':'); const o=subObj(k,id); if(!o) return; const i=(o.steps||[]).findIndex(x=>x.id===sid); if(i<0) return; const [st]=o.steps.splice(i,1); save(); render(); toast('Sous-élément retiré','Annuler',()=>{o.steps.splice(i,0,st);save();render()}); },
