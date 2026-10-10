@@ -259,6 +259,22 @@ body.vjour #main{touch-action:pan-y}
 .icsel span{font-size:26px}.icsel small{font-size:12px;font-weight:650}.icsel.on{border-color:var(--a1)}
 .fontcur{flex-direction:row!important;align-items:center;gap:10px;border-color:var(--a1)!important}
 .fontcur .grow{display:flex;flex-direction:column;gap:2px}.fcaret{font-size:18px;color:var(--muted)}
+body.vjour #top{display:none}
+body.vjour main{padding-top:calc(env(safe-area-inset-top) + 14px)}
+body.vjour.navtop main{padding-top:calc(env(safe-area-inset-top) + var(--navh) + 22px)}
+/* Dock une main */
+.micdock{position:fixed;left:max(16px,calc(50% - 344px));bottom:calc(var(--navh) + 30px + var(--lift,18px) + env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;z-index:15}
+body.navtop .micdock{bottom:calc(24px + env(safe-area-inset-bottom))}
+.fabmic{width:58px;height:58px;border-radius:50%;border:0;font-size:26px;color:#fff;background:linear-gradient(135deg,var(--a1),var(--a2));box-shadow:0 10px 24px color-mix(in srgb,var(--a1) 45%,transparent)}
+.fabmic.rec{background:linear-gradient(135deg,#ff5d6c,#c2185b);animation:pulse 1.2s infinite}
+.dockbtn{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);font-size:19px;box-shadow:var(--shadow)}
+.livebox{position:fixed;left:max(16px,calc(50% - 344px));right:max(16px,calc(50% - 344px));bottom:calc(var(--navh) + 100px + var(--lift,18px) + env(safe-area-inset-bottom));z-index:16;background:var(--card);border:1px solid color-mix(in srgb,#ff5d6c 45%,transparent);border-radius:18px;padding:12px 14px;box-shadow:var(--shadow)}
+body.navtop .livebox{bottom:calc(96px + env(safe-area-inset-bottom))}
+.livebox .live{font-style:italic;max-height:30vh;overflow:auto;white-space:pre-wrap;margin:6px 0;font-size:15px}
+.livebox small{color:var(--muted);font-size:12px}
+.item.top{align-items:flex-start}.item.top .chk{margin-top:1px}.item.top .handle{padding-top:2px}
+.bgt.match{border-color:color-mix(in srgb,var(--a1) 60%,transparent)}
+.bgt.match::before{content:"Assorti";position:absolute;top:6px;left:6px;font-size:10px;font-weight:800;background:#fff;color:#1a1a1a;border-radius:6px;padding:1px 6px;z-index:1}
 /* Forms */
 .fld{display:block;margin:10px 0}
 .fld>span{display:block;font-size:12.5px;font-weight:650;color:var(--muted);margin:0 0 5px 2px}
@@ -293,7 +309,7 @@ input:focus,select:focus,textarea:focus{border-color:var(--a1)}
 .menu button{border:1px solid var(--line);background:var(--card2);border-radius:18px;padding:14px 6px;display:flex;flex-direction:column;align-items:center;gap:6px;font-weight:600;font-size:13px}
 .menu button span{font-size:26px}
 /* Toast & viewer */
-#toast{position:fixed;left:50%;transform:translate(-50%,20px);bottom:calc(var(--navh) + 34px + var(--lift,18px) + env(safe-area-inset-bottom));background:var(--toast);color:#fff;border-radius:14px;padding:11px 14px;display:flex;gap:14px;align-items:center;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s;z-index:60;width:max-content;max-width:92vw;font-size:14.5px}
+#toast{position:fixed;left:50%;transform:translate(-50%,20px);bottom:calc(var(--navh) + 100px + var(--lift,18px) + env(safe-area-inset-bottom));background:var(--toast);color:#fff;border-radius:14px;padding:11px 14px;display:flex;gap:14px;align-items:center;box-shadow:var(--shadow);opacity:0;pointer-events:none;transition:.2s;z-index:60;width:max-content;max-width:92vw;font-size:14.5px}
 body.navtop #toast{bottom:calc(30px + env(safe-area-inset-bottom))}
 #toast.show{opacity:1;transform:translate(-50%,0);pointer-events:auto}
 #toast button{background:none;border:0;color:#9db4ff;font-weight:750;padding:0}
@@ -323,6 +339,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <main id="main"></main>
 <nav id="nav"></nav>
 <div id="sheetWrap" class="hidden"><div class="backdrop" data-a="closeSheet"></div><div class="sheet" id="sheet"></div></div>
+<div id="dock"></div>
 <div id="toast"></div>
 <div id="viewer" class="hidden" data-a="closeViewer"><img alt=""></div>
 <input type="file" id="fileImg" accept="image/*" multiple hidden>
@@ -333,7 +350,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.4.1';
+const VERSION='3.5.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -415,7 +432,7 @@ function defaults(){
   return {tasks:[],events:[],items:[],notes:[],reminders:[],habits:[],ideas:[],loans:[],syncDeletes:[],draft:'',
     folders:[tr,f('Conseil des maîtres',tr.id,3,'🧑‍🏫'),f('Conseil du vendredi',tr.id,5,'🗓️'),f("Conseil d'école",tr.id,1,'🏫'),f('Conseil de cycle',tr.id,4,'🔄'),f('Achat pour la classe',tr.id,6,'🛒'),f('Travaux',null,2,'🔨')],
     settings:{navPos:'bottom',theme:'dark',accent:'nuit',tabOrder:['jour','taches','todo','agenda','notes'],dayStart:'08:00',dayEnd:'20:00',defaultDuration:30,
-      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'brume',bgVeil:45,bgBlur:0,bgVer:0,font:'system',palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
+      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'p_theta',bgBright:100,bgVeil:45,bgBlur:0,bgVer:0,font:'system',palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
 }
 function load(){
   try{const raw=localStorage.getItem(KEY);S=raw?JSON.parse(raw):defaults()}catch(e){S=defaults()}
@@ -426,6 +443,7 @@ function normalizeState(){
   for(const k in d) if(S[k]===undefined) S[k]=d[k];
   S.settings={...d.settings,...S.settings};
   if(!S.settings._lift2){ if(+S.settings.navLift===18) S.settings.navLift=4; S.settings._lift2=true; }
+  if(!S.settings._bg2){ if(S.settings.bg==='brume'&&S.settings.palette) S.settings.bg='p_'+S.settings.palette; S.settings._bg2=true; }
   const order=S.settings.tabOrder.filter(k=>TABS[k]);
   for(const k of Object.keys(TABS)) if(!order.includes(k)) order.push(k);
   S.settings.tabOrder=order;
@@ -470,13 +488,19 @@ const ZEN={
     s+='<ellipse cx="112" cy="294" rx="30" ry="21" fill="#7b7c74"/><ellipse cx="104" cy="284" rx="13" ry="6" fill="#9a9b92" opacity=".7"/><ellipse cx="290" cy="575" rx="38" ry="24" fill="#6a6c66"/><ellipse cx="315" cy="590" rx="18" ry="12" fill="#7f8079"/><ellipse cx="280" cy="563" rx="15" ry="6" fill="#8d8e86" opacity=".7"/><ellipse cx="296" cy="555" rx="22" ry="7" fill="#7f9a6a" opacity=".55"/>';return s}},
 };
 const zenCache={};
+Object.entries(PALETTES).forEach(([k,P])=>{ZEN['p_'+k]={name:P.name,pal:k,svg(){
+  const T=Object.values(P.tabs), L=P.light;
+  let o=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${T[3][0]}" stop-opacity=".45"/><stop offset=".55" stop-color="${L.card2}"/><stop offset="1" stop-color="${L.bg}"/></linearGradient><filter id="f"><feGaussianBlur stdDeviation="14"/></filter></defs><rect width="400" height="800" fill="${L.bg}"/><rect width="400" height="800" fill="url(#g)"/><circle cx="270" cy="232" r="54" fill="#fff" opacity=".72"/>`;
+  [T[4][0],T[1][0],T[0][0],T[2][1],T[3][1]].forEach((c,i)=>{o+=`<path d="${ridge(380+i*88,24-i*2,i*1.7+k.length)}" fill="${c}" opacity="${(.5+i*.1).toFixed(2)}"/><ellipse cx="${120+(i*60)%300}" cy="${400+i*88}" rx="260" ry="24" fill="${L.bg}" opacity=".45" filter="url(#f)"/>`});
+  return o}}});
+const bgOrder=()=>{const m='p_'+S.settings.palette,E=Object.entries(ZEN);return [...E.filter(([k])=>k===m),...E.filter(([k,z])=>z.pal&&k!==m),...E.filter(([k,z])=>!z.pal)]};
 const zenURL=k=>zenCache[k]||(zenCache[k]='data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">${ZEN[k].svg()}</svg>`));
 let hasCustomBg=false;
 async function applyBg(){
   const s=S.settings, el=$('#bg'), on=s.bg&&s.bg!=='none';
   document.body.classList.toggle('hasbg',!!on);
   $('#bgVeil').style.opacity=on?s.bgVeil/100:1;
-  el.style.filter=on&&+s.bgBlur?`blur(${s.bgBlur}px)`:'';
+  el.style.filter=on?[+s.bgBlur?`blur(${s.bgBlur}px)`:'',`brightness(${(+s.bgBright||100)/100})`].join(' ').trim():'';
   const key=on?s.bg+':'+(s.bg==='custom'?s.bgVer:''):'none';
   if(el.dataset.k===key) return;
   el.dataset.k=key;
@@ -529,7 +553,8 @@ function render(){
   $('#backBtn').classList.toggle('hidden',!(sub||(view==='todo'&&todoFolder)));
   $('#topActions').innerHTML=r.actions||'';
   document.body.classList.toggle('vjour',view==='jour'&&!sub);
-  $('#main').innerHTML=r.html+(r.fab?`<button class="fab" data-a="${r.fab}" aria-label="Ajouter">+</button>`:'');
+  $('#main').innerHTML=r.html;
+  $('#dock').innerHTML=(r.fab?`<button class="fab" data-a="${r.fab}" aria-label="Ajouter">+</button>`:'')+(r.mic?micDock(r.mic):'');
   if(r.after) r.after();
   if(recOn) showLive();
   $$('img[data-img]').forEach(async im=>{const u=await imgURL(im.dataset.img);if(u)im.src=u});
@@ -624,7 +649,7 @@ function taskRow(x){
   if(x.recur&&x.recur!=='none') m.push(`<span class="tag">🔁 ${RECUR_L[x.recur]||''}</span>`);
   m.push(syncTag(x));
   const th=x.images&&x.images.length?`<img class="tthumb" data-img="${x.images[0]}" data-a="viewImg" data-id="${x.images[0]}" alt="">`:'';
-  return `<div class="item ${x.done?'done':''}"><button class="chk ${x.done?'on':''}" data-a="toggleTask" data-id="${x.id}" aria-label="Terminer"></button><div class="grow" data-a="editTask" data-id="${x.id}"><div class="ttl">${esc(x.title)}</div><div class="meta">${m.join('')}</div>${subList(x,'task')}</div>${th}${x.done?'':subBtn(x,'task')}<span class="prio p-${x.priority}"></span></div>`;
+  return `<div class="item ${x.done?'done':''} ${(x.steps&&x.steps.length)||subAddFor==='task:'+x.id?'top':''}"><button class="chk ${x.done?'on':''}" data-a="toggleTask" data-id="${x.id}" aria-label="Terminer"></button><div class="grow" data-a="editTask" data-id="${x.id}"><div class="ttl">${esc(x.title)}</div><div class="meta">${m.join('')}</div>${subList(x,'task')}</div>${th}${x.done?'':subBtn(x,'task')}<span class="prio p-${x.priority}"></span></div>`;
 }
 function eventRow(e,day){
   const c=S.settings.calendars.find(c=>c.id===e.calId);
@@ -694,7 +719,7 @@ VIEWS.jour=()=>{
   const subl=[all.length?`${dn} / ${plural(all.length,'tâche')} accomplie${dn>1?'s':''}`:'',late.length?`${late.length} en retard`:'',evs.length?plural(evs.length,'événement'):'',rems.length?plural(rems.length,'rappel'):''].filter(Boolean).join(' · ')||(isToday?'Rien de prévu : profitez-en':'Rien de prévu ce jour-là');
   let html=`<div class="hero">${isToday?'':`<div class="hero-date">${jourOff===1?'Demain':'Dans '+jourOff+' jours'}</div>`}<div class="hero-day">${cap(JOURS[D.getDay()])} ${D.getDate()} ${MOIS_A[D.getMonth()]}</div><div class="hero-sub">${subl}</div>${miniStrip(T)}</div>`;
   const hol=holidayOn(t); if(hol) html+=`<div style="margin-top:12px">${holiHTML(hol)}</div>`;
-  html+=dictCard('jour');
+
   const nrev=S.notes.filter(n=>n.status==='review').length;
   if(nrev) html+=sec('À ranger',nrev)+reviewCards();
   if(isToday&&hasData&&!S.settings.driveFileId&&(!S.settings.lastBackup||Date.now()-S.settings.lastBackup>14*864e5)) html+=`<button class="banner" data-a="export">💾 Pensez à sauvegarder vos données<span class="grow"></span>Exporter</button>`;
@@ -706,21 +731,21 @@ VIEWS.jour=()=>{
   if(monthT.length) html+=sec('🗓️ Ce mois-ci · '+fmtMonth(tm),monthT.length)+`<div class="list">${monthT.map(taskRow).join('')}</div>`;
   if(isToday&&S.habits.length) html+=sec('Habitudes')+`<div class="hchips">${S.habits.map(hb=>`<button class="chip ${hb.log[t]?'on':''}" data-a="habitDay" data-id="${hb.id}" data-v="${t}">${esc(hb.emoji||'⭐')} ${esc(hb.name)}</button>`).join('')}</div>`;
   if(nAcc) html+=sec(isToday?'Accompli aujourd\'hui':'Accompli',nAcc)+`<div class="list">${accT.map(taskRow).join('')}${accR.map(r=>remRow(r,t)).join('')}${accI.map(itemDoneRow).join('')}</div><p class="small muted" style="text-align:center;margin:8px 0 0">Touchez une coche pour annuler.</p>`;
-  return {title:isToday?'Aujourd\'hui':jourOff===1?'Demain':cap(JOURS[D.getDay()])+' '+D.getDate(),html};
+  return {title:isToday?'Aujourd\'hui':jourOff===1?'Demain':cap(JOURS[D.getDay()])+' '+D.getDate(),html,mic:'jour'};
 };
 
 /* ---------- Tâches ---------- */
 VIEWS.taches=()=>{
   const t=today(), cm=curMonth();
   const fri=nextFriday();
-  let html=dictCard('task')+chips([['todo','À faire'],['today','Aujourd\'hui'],['fri','Ven. '+parseD(fri).getDate()],['done','Faites'],['all','Toutes']],taskFilter,'taskFilter',true);
+  let html=chips([['todo','À faire'],['today','Aujourd\'hui'],['fri','Ven. '+parseD(fri).getDate()],['done','Faites'],['all','Toutes']],taskFilter,'taskFilter',true);
   let L=S.tasks.slice();
   if(taskFilter==='todo') L=L.filter(x=>!x.done);
   if(taskFilter==='today') L=L.filter(x=>x.date===t||(!x.done&&((x.date&&x.date<t)||(x.month&&x.month<=cm))));
   if(taskFilter==='done') L=L.filter(x=>x.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   if(taskFilter==='fri'){ L=L.filter(x=>x.date===fri).sort((a,b)=>a.done-b.done||byTime(a,b)||PRIO[a.priority]-PRIO[b.priority]);
     html+=sec('📅 '+fmtLong(fri),L.length||null)+(L.length?`<div class="list">${L.map(taskRow).join('')}</div>`:empty('','Rien de prévu vendredi',`<div><button class="btn sm primary" data-a="newTaskFri" style="margin-top:8px">+ Tâche pour vendredi</button></div>`,1));
-    return {title:'Tâches',html,fab:'newTaskFri'}; }
+    return {title:'Tâches',html,fab:'newTaskFri',mic:'task'}; }
   if(!L.length) html+=empty('✅','Rien ici','Ajoutez une tâche avec le bouton +, ou dictez avec Thêta écoute.');
   else if(taskFilter==='done') html+=`<div class="list">${L.map(taskRow).join('')}</div>`;
   else{
@@ -730,7 +755,7 @@ VIEWS.taches=()=>{
     const used=new Set();
     for(const[name,fn]of G){ const g=L.filter(x=>!used.has(x)&&fn(x)).sort(sorter); g.forEach(x=>used.add(x)); if(g.length) html+=sec(name,g.length)+`<div class="list">${g.map(taskRow).join('')}</div>`; }
   }
-  return {title:'Tâches',html,fab:'newTask'};
+  return {title:'Tâches',html,fab:'newTask',mic:'task'};
 };
 
 /* ---------- Todo ---------- */
@@ -748,7 +773,7 @@ function tile(f){
   return `<button class="tile" data-a="openFolder" data-id="${f.id}" style="background:${GRADS[(f.color||0)%GRADS.length]}"><span class="ic">${esc(f.icon||'📁')}</span><span><b>${esc(f.name)}</b><br><small>${n?n+' à faire':'À jour ✓'}</small></span>${kids.length?`<span class="pills">${kids.slice(0,4).map(k=>`<span class="pill" data-a="openFolder" data-id="${k.id}">${esc(k.icon||'📁')} ${esc(k.name)}</span>`).join('')}${kids.length>4?`<span class="pill">+${kids.length-4}</span>`:''}</span>`:''}</button>`;
 }
 function itemRow(i){
-  return `<div class="item todo-item ${i.done?'done':''}" data-id="${i.id}">${i.done?'':'<span class="handle" aria-label="Déplacer">⠿</span>'}<button class="chk round ${i.done?'on':''}" data-a="toggleItem" data-id="${i.id}"></button><div class="grow" data-a="editItem" data-id="${i.id}"><div class="ttl">${linkify(esc(i.text))}</div>${subList(i,'item')}${i.images&&i.images.length?`<div class="thumbs">${i.images.map(id=>`<img data-img="${id}" data-a="viewImg" data-id="${id}" alt="">`).join('')}</div>`:''}</div>${i.done?'':subBtn(i,'item')}</div>`;
+  return `<div class="item todo-item ${i.done?'done':''} ${(i.steps&&i.steps.length)||(i.images&&i.images.length)||subAddFor==='item:'+i.id?'top':''}" data-id="${i.id}">${i.done?'':'<span class="handle" aria-label="Déplacer">⠿</span>'}<button class="chk round ${i.done?'on':''}" data-a="toggleItem" data-id="${i.id}"></button><div class="grow" data-a="editItem" data-id="${i.id}"><div class="ttl">${linkify(esc(i.text))}</div>${subList(i,'item')}${i.images&&i.images.length?`<div class="thumbs">${i.images.map(id=>`<img data-img="${id}" data-a="viewImg" data-id="${id}" alt="">`).join('')}</div>`:''}</div>${i.done?'':subBtn(i,'item')}</div>`;
 }
 VIEWS.todo=()=>{
   if(todoFolder&&!S.folders.find(f=>f.id===todoFolder)) todoFolder=null;
@@ -757,13 +782,11 @@ VIEWS.todo=()=>{
   const subs=S.folders.filter(f=>(f.parentId||null)===cur);
   const items=S.items.filter(i=>(i.folderId||null)===cur), open=items.filter(i=>!i.done), done=items.filter(i=>i.done);
   if(subs.length) html+=`<div class="tiles" id="tiles">${subs.map(tile).join('')}</div>`;
-  html+=dictCard('item');
-  html+=`<div class="card addbar"><input id="newItem" type="text" placeholder="${cur?'Ajouter dans « '+esc(path[path.length-1].name)+' »…':'Ajouter une note…'}" enterkeyhint="done" autocomplete="off"><button class="icon-btn" data-a="addImgNew" data-v="cam" aria-label="Prendre une photo">📸</button><button class="icon-btn" data-a="addImgNew" data-v="gal" aria-label="Choisir dans la galerie">🖼️</button><button class="btn primary sm" data-a="addItem">+</button></div>`;
   if(!subs.length&&!items.length) html+=empty('📝','Rien ici pour l\'instant','Écrivez, dictez, prenez une photo ou créez un sous-dossier avec 📁+.');
   if(open.length) html+=`<div class="list" id="itemsList">${open.map(itemRow).join('')}</div>`;
   if(done.length) html+=`<details class="donebox"><summary>${plural(done.length,'élément terminé','éléments terminés')}</summary><div class="list">${done.map(itemRow).join('')}</div><button class="btn sm ghost danger block" data-a="clearDone">Effacer les terminés</button></details>`;
   if(subs.length||open.length) html+=`<p class="small muted" style="text-align:center;margin-top:16px">Astuce : appui long sur un dossier, ou ⠿ sur un élément, pour réorganiser.</p>`;
-  return {title:cur?path[path.length-1].name:'Notes',html,
+  return {title:cur?path[path.length-1].name:'Notes',html,fab:'newItem',mic:'item',
     actions:`<button class="icon-btn" data-a="newFolder" aria-label="Nouveau dossier">📁+</button>${cur?'<button class="icon-btn" data-a="editFolder" aria-label="Options du dossier">⋯</button>':''}`,
     after(){
       sortable($('#tiles'),'.tile',ids=>{reorder(S.folders,ids);save()});
@@ -791,7 +814,7 @@ VIEWS.agenda=()=>{
     const L=days[d].sort((a,b)=>a.s.localeCompare(b.s));
     html+=sec(fmtLong(d)+(d===t?' · aujourd\'hui':''),null)+`<div class="list">${L.map(x=>x.k==='h'?holiHTML(x.o):x.k==='e'?eventRow(x.o,d):taskRow(x.o)).join('')}</div>`;
   }
-  return {title:'Agenda',html,fab:'newEvent'};
+  return {title:'Agenda',html,fab:'newEvent',mic:'event'};
 };
 
 /* ---------- Notes ---------- */
@@ -811,6 +834,11 @@ function propCard(n,p){
 function reviewCards(){
   return S.notes.filter(n=>n.status==='review').map(n=>{const P=n.props.filter(p=>p.status==='pending');
     return `<div class="card" style="margin-bottom:12px"><div class="raw">« ${esc(n.text)} »</div>${P.map(p=>propCard(n,p)).join('')}${P.length>1?`<div class="pbtns" style="margin-top:12px"><button class="btn sm ghost" data-a="noteDiscard" data-id="${n.id}">Tout ignorer</button><button class="btn sm primary" data-a="noteAll" data-id="${n.id}">✓ Tout valider (${P.length})</button></div>`:''}</div>`}).join('');
+}
+function micDock(mode){
+  const on=recOn&&recMode===mode, sr=!!SRc();
+  const ex={jour:[['dictPhoto','📸','Photo'],['typeNote','⌨️','Écrire']],task:[['taskPhoto','📸','Photo → tâche']],item:[['notePhoto','📸','Photo → note']],event:[]}[mode]||[];
+  return `${on?`<div class="livebox"><b>🎙️ Thêta écoute…</b><div id="dictLive" class="live"></div><small>Touchez ⏹ quand vous avez fini</small></div>`:''}<div class="micdock"><button id="micBtn" class="fabmic ${on?'rec':''}" data-a="mic" data-v="${mode}" ${sr?'':'disabled'} aria-label="${on?'Terminer':'Thêta écoute'}">${on?'⏹':'🎙️'}</button>${on?'':ex.map(([a,i,l])=>`<button class="dockbtn" data-a="${a}" aria-label="${l}">${i}</button>`).join('')}</div>`;
 }
 function dictCard(mode){
   const sr=!!SRc(), on=recOn&&recMode===mode;
@@ -910,9 +938,10 @@ SUBS.reglages=()=>{
   <div class="small muted" style="margin-top:4px">Remontez la barre si les boutons de votre téléphone la cachent.</div></div>`;
   const fk0=FONTS[s.font]?s.font:'system';
   html+=sec('Police')+`<div class="card fonts"><button class="fontopt fontcur" data-a="fontToggle" style="font-family:${esc(FONTS[fk0][1])}"><span class="grow"><b>${FONTS[fk0][0]}</b><small>Conseil de cycle jeudi 17h — 0123456789</small></span><span class="fcaret">${fontOpen?'▴':'▾'}</span></button>${fontOpen?Object.entries(FONTS).filter(([k])=>k!==fk0).map(([k,[l,ff]])=>`<button class="fontopt" data-a="setFont" data-id="${k}" style="font-family:${esc(ff)}"><b>${l}</b><small>Conseil de cycle jeudi 17h — 0123456789</small></button>`).join(''):''}</div>`;
-  html+=sec('Fond d\'écran')+`<div class="card"><div class="bgs">${[['none','Aucun'],...Object.entries(ZEN).map(([k,z])=>[k,z.name])].map(([k,l])=>`<button class="bgt ${s.bg===k?'on':''}" data-a="setBg" data-id="${k}" style="${ZEN[k]?`background-image:url('${zenURL(k)}')`:''}">${k==='none'?'<span style="position:static;background:none;color:var(--muted)">Uni</span>':`<span>${l}</span>`}</button>`).join('')}${hasCustomBg?`<button class="bgt ${s.bg==='custom'?'on':''}" data-a="setBg" data-id="custom"><img data-img="bg_custom" alt=""><span>Ma photo</span></button>`:''}<button class="bgt add" data-a="pickBg"><b style="font-size:22px">📷</b>Depuis le téléphone</button></div>
+  html+=sec('Fond d\'écran')+`<div class="card"><div class="bgs">${[['none','Aucun'],...bgOrder().map(([k,z])=>[k,z.pal?'🎨 '+z.name:z.name])].map(([k,l])=>`<button class="bgt ${s.bg===k?'on':''} ${k==='p_'+s.palette?'match':''}" data-a="setBg" data-id="${k}" style="${ZEN[k]?`background-image:url('${zenURL(k)}')`:''}">${k==='none'?'<span style="position:static;background:none;color:var(--muted)">Uni</span>':`<span>${l}</span>`}</button>`).join('')}${hasCustomBg?`<button class="bgt ${s.bg==='custom'?'on':''}" data-a="setBg" data-id="custom"><img data-img="bg_custom" alt=""><span>Ma photo</span></button>`:''}<button class="bgt add" data-a="pickBg"><b style="font-size:22px">📷</b>Depuis le téléphone</button></div>
   <div class="range"><span class="small">Voile</span><input type="range" min="0" max="85" step="5" value="${s.bgVeil}" data-r="bgVeil" aria-label="Voile"><b>${s.bgVeil} %</b></div>
   <div class="range"><span class="small">Flou&nbsp;</span><input type="range" min="0" max="16" step="1" value="${s.bgBlur}" data-r="bgBlur" aria-label="Flou"><b>${s.bgBlur} px</b></div>
+  <div class="range"><span class="small">Luminosité</span><input type="range" min="40" max="140" step="5" value="${+s.bgBright||100}" data-r="bgBright" aria-label="Luminosité"><b>${+s.bgBright||100} %</b></div>
   <div class="small muted" style="margin-top:8px">Le voile atténue l'image pour garder les textes lisibles.</div></div>`;
   html+=sec('Ordre des onglets')+`<div class="card"><div class="taborder" id="tabOrder">${s.tabOrder.map((k,i)=>`<div class="tabtile handle" data-id="${k}"><span>${tabIcon(k)}</span><small>${TABS[k][1]}</small>${i===0?'<em>ouverture</em>':''}</div>`).join('')}</div><div class="small muted" style="margin-top:8px">Faites glisser un onglet pour le déplacer. Le premier s'ouvre au démarrage.</div></div>`;
   html+=sec('Icônes de l\'application')+`<div class="card"><div class="iconrow">${['jour','taches','todo','agenda'].map(k=>`<button class="icsel ${iconEdit===k?'on':''}" data-a="iconEdit" data-id="${k}"><span>${tabIcon(k)}</span><small>${TABS[k][1]}</small></button>`).join('')}</div>${iconEdit?`<div class="small muted" style="margin:12px 0 2px">Choisissez l'icône de « ${TABS[iconEdit][1]} » :</div><div class="iconpick">${(TAB_ICONS[iconEdit]||[]).map(ic=>`<button type="button" class="${tabIcon(iconEdit)===ic?'on':''}" data-a="setTabIcon" data-id="${iconEdit}|${ic}">${ic}</button>`).join('')}</div>`:'<div class="small muted" style="margin-top:10px">Touchez une icône pour voir les propositions.</div>'}</div>`;
@@ -968,7 +997,7 @@ function taskSheet(x,preset){
   const defDate=pr.date!==undefined?pr.date:(view==='taches'&&taskFilter!=='today'?'':(view==='jour'?addDays(today(),jourOff):today()));
   const v=x||{title:'',date:defDate,time:pr.time||'',priority:'moyenne',duration:S.settings.defaultDuration};
   const when=v.month?'month':(v.date?'day':'none');
-  sheetSteps=((x&&x.steps)||[]).map(st=>({...st})); sheetImgs=[...((x&&x.images)||[])];
+  sheetSteps=((x&&x.steps)||[]).map(st=>({...st})); sheetImgs=[...((x&&x.images)||pr.images||[])];
   openSheet(isNew?'Nouvelle tâche':'Modifier la tâche',
     fld('Intitulé',inp('title',v.title,'text','required autofocus'))+
     fld('Échéance',`<div onchange="thetaWhen(this)">${seg('when',[['day','📅 Un jour'],['month','🗓️ Un mois'],['none','Sans date']],when)}</div>`)+
@@ -1109,15 +1138,16 @@ function folderSheet(f,parentId){
        todoFolder=f.parentId||null; closeSheet(); save(); render(); toast('Dossier supprimé');
      }});
 }
-function itemSheet(it){
-  sheetImgs=[...(it.images||[])]; sheetSteps=(it.steps||[]).map(st=>({...st}));
-  openSheet('Note',
-    fld('Texte',`<textarea name="text">${esc(it.text)}</textarea>`)+
+function itemSheet(it,pre){
+  const isNew=!it; it=it||{id:uid(),folderId:todoFolder,text:'',done:false,images:[],steps:[],created:Date.now()};
+  sheetImgs=[...((pre&&pre.images)||it.images||[])]; sheetSteps=(it.steps||[]).map(st=>({...st}));
+  openSheet(isNew?'Nouvelle note':'Note',
+    fld('Texte',`<textarea name="text" ${isNew?'autofocus':''} placeholder="Votre note…">${esc(it.text)}</textarea>`)+
     fld('Sous-éléments',stepsHTML())+
     fld('Photos',imgBoxHTML())+
     fld('Dossier',`<select name="folderId">${folderOptions(it.folderId)}</select>`),
-    {onSave(fd){const text=fd.text.trim();if(!text&&!sheetImgs.length)return false;commitImgs(it);it.steps=readSteps();it.text=text||'Photo';it.folderId=fd.folderId||null;save();render()},
-     onDelete:()=>{closeSheet();removeUndo('items',it,'Note')}});
+    {onSave(fd){const text=fd.text.trim();if(!text&&!sheetImgs.length)return false;commitImgs(it);it.steps=readSteps();it.text=text||'Photo';it.folderId=fd.folderId||null;if(isNew)S.items.push(it);save();render();if(isNew)toast('📝 Note ajoutée')},
+     onDelete:isNew?null:()=>{closeSheet();removeUndo('items',it,'Note')}});
   refreshImgBox();
 }
 
@@ -1301,7 +1331,7 @@ const cleanDict=s=>s.replace(/[ \t]*(?<![\wÀ-ÿ])(?:point à la ligne|retour à
 function showLive(){
   const t=cleanDict(recBuf+recInterim);
   if(recMode==='notes'){const el=$('#noteText');if(el){el.value=t;S.draft=t}}
-  else{const el=$('#dictLive');if(el){el.textContent=t.trim()||'Thêta écoute…';el.scrollTop=el.scrollHeight}}
+  else{const el=$('#dictLive');if(el){el.textContent=t.trim()||'…';el.scrollTop=el.scrollHeight}}
 }
 function recSession(){
   const SR=SRc(); rec=new SR(); rec.lang='fr-FR'; rec.interimResults=true; rec.continuous=!/Android/i.test(navigator.userAgent);
@@ -1332,6 +1362,11 @@ function finishRec(){
     const props=parseNote(text), before=new Set(S.tasks.map(x=>x.id));
     props.forEach(p=>{p.type='task';applyProp(p)}); const ids=S.tasks.filter(x=>!before.has(x.id)).map(x=>x.id);
     save(); render(); toast(`✅ ${plural(ids.length,'tâche ajoutée','tâches ajoutées')}`,'Annuler',()=>{S.tasks=S.tasks.filter(x=>!ids.includes(x.id));save();render()}); return;
+  }
+  if(recMode==='event'&&text){
+    const props=parseNote(text), before=new Set(S.events.map(x=>x.id));
+    props.forEach(p=>{p.type='event';if(!p.date)p.date=today();applyProp(p)}); const ids=S.events.filter(x=>!before.has(x.id)).map(x=>x.id);
+    save(); render(); toast(`📅 ${plural(ids.length,'événement ajouté','événements ajoutés')}`,'Annuler',()=>{S.events=S.events.filter(x=>!ids.includes(x.id));save();render()}); return;
   }
   if(recMode==='item'&&text){
     const lines=text.split(/\n+/).map(x=>cap(x.trim().replace(/[\s.,;]+$/,''))).filter(Boolean);
@@ -1768,6 +1803,9 @@ const A={
     if(!text){toast('Dictez ou écrivez d\'abord une note');return}
     if(analyzeText(text)){S.draft='';save();render()}
   },
+  taskPhoto(){ imgTarget={newTask:true}; $('#fileCam').click(); },
+  notePhoto(){ imgTarget={folder:todoFolder,text:''}; $('#fileCam').click(); },
+  newItem(){ itemSheet(null); },
   dictPhoto(){ imgTarget={share:true}; $('#fileCam').click(); },
   typeNote(){
     openSheet('Écrire une note',fld('Une idée par ligne',`<textarea name="text" required autofocus style="min-height:150px" placeholder="Conseil de cycle jeudi 17h&#10;Acheter des feutres pour la classe&#10;Rappelle-moi d'appeler maman demain soir">${esc(S.draft||'')}</textarea>`),
@@ -1803,7 +1841,7 @@ const A={
   setBg(id){ S.settings.bg=id; save(); render(); },
   pickBg(){ $('#fileBg').click(); },
   setTheme(id){ S.settings.theme=id; save(); render(); },
-  setPalette(id){ S.settings.palette=id; save(); render(); toast(id?'🎨 Palette « '+PALETTES[id].name+' »':'🎨 Couleur unique'); },
+  setPalette(id){ S.settings.palette=id; if(id&&S.settings.bg!=='custom'&&S.settings.bg!=='none'){S.settings.bg='p_'+id;$('#bg').dataset.k=''} save(); render(); toast(id?'🎨 Palette « '+PALETTES[id].name+' »':'🎨 Couleur unique'); },
   tabIconPick(k){ openSheet('Icône de l\'onglet '+TABS[k][1],`<div class="iconpick">${(TAB_ICONS[k]||[]).map(ic=>`<button type="button" class="${tabIcon(k)===ic?'on':''}" data-a="setTabIcon" data-id="${k}|${ic}">${ic}</button>`).join('')}</div>`); },
   iconEdit(k){ iconEdit=iconEdit===k?null:k; render(); },
   setTabIcon(v){ const i=v.indexOf('|'), k=v.slice(0,i), ic=v.slice(i+1); S.settings.tabIcons={...(S.settings.tabIcons||{}),[k]:ic}; save(); if(sheetOpen) closeSheet(); render(); toast('Icône de « '+TABS[k][1]+' » : '+ic); },
@@ -1875,6 +1913,7 @@ async function onImgFiles(e){
   toast('Préparation de la photo…');
   const ids=await storeImages(files); if(!ids.length) return;
   if(imgTarget.share){shareSheet('',ids,'📸 Nouvelle photo');return}
+  if(imgTarget.newTask){taskSheet(null,{images:ids});return}
   if(imgTarget.sheet){sheetImgs.push(...ids);refreshImgBox()}
   else{S.items.push({id:uid(),folderId:imgTarget.folder,text:imgTarget.text.trim()||(ids.length>1?'Photos':'Photo'),done:false,images:ids,created:Date.now()});save();render()}
   toast('📸 '+plural(ids.length,'photo ajoutée','photos ajoutées'));
@@ -1888,7 +1927,7 @@ $('#fileBg').addEventListener('change',async e=>{
     Object.assign(S.settings,{bg:'custom',bgVer:Date.now()}); save(); render(); toast('🌿 Nouveau fond appliqué'); }
   catch(err){ toast('⚠️ '+err.message); }
 });
-document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.r;if(!k)return;S.settings[k]=+e.target.value;const b=e.target.nextElementSibling;if(b)b.textContent=e.target.value+(k==='bgVeil'?' %':' px');applyTheme();clearTimeout(draftT);draftT=setTimeout(save,300)});
+document.addEventListener('input',e=>{const k=e.target.dataset&&e.target.dataset.r;if(!k)return;S.settings[k]=+e.target.value;const b=e.target.nextElementSibling;if(b)b.textContent=e.target.value+(k==='bgVeil'||k==='bgBright'?' %':' px');applyTheme();clearTimeout(draftT);draftT=setTimeout(save,300)});
 $('#fileImport').addEventListener('change',async e=>{
   const f=e.target.files[0]; e.target.value=''; if(!f) return;
   try{ await restoreData(JSON.parse(await f.text())); }catch(err){ toast('⚠️ Import impossible : '+err.message); }
