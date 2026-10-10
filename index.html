@@ -263,7 +263,10 @@ body.vjour #top{display:none}
 body.vjour main{padding-top:calc(env(safe-area-inset-top) + 14px)}
 body.vjour.navtop main{padding-top:calc(env(safe-area-inset-top) + var(--navh) + 22px)}
 /* Dock une main */
-.micdock{position:fixed;left:max(16px,calc(50% - 344px));bottom:calc(var(--navh) + 30px + var(--lift,18px) + env(safe-area-inset-bottom));display:flex;align-items:center;gap:8px;z-index:15}
+.micdock{position:fixed;left:max(16px,calc(50% - 344px));bottom:calc(var(--navh) + 30px + var(--lift,18px) + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:flex-start;gap:8px;z-index:15}
+.dockrow{display:flex;align-items:center;gap:8px}
+.dockpills{display:flex;gap:6px}
+.dockpill{border:1px solid var(--line);background:var(--glass);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);color:var(--text);border-radius:999px;padding:7px 12px;font-size:13px;font-weight:700;box-shadow:var(--shadow)}
 body.navtop .micdock{bottom:calc(24px + env(safe-area-inset-bottom))}
 .fabmic{width:58px;height:58px;border-radius:50%;border:0;font-size:26px;color:#fff;background:linear-gradient(135deg,var(--a1),var(--a2));box-shadow:0 10px 24px color-mix(in srgb,var(--a1) 45%,transparent)}
 .fabmic.rec{background:linear-gradient(135deg,#ff5d6c,#c2185b);animation:pulse 1.2s infinite}
@@ -351,7 +354,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.5.1';
+const VERSION='3.5.2';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -726,7 +729,7 @@ VIEWS.jour=()=>{
   if(isToday&&hasData&&!S.settings.driveFileId&&(!S.settings.lastBackup||Date.now()-S.settings.lastBackup>14*864e5)) html+=`<button class="banner" data-a="export">💾 Pensez à sauvegarder vos données<span class="grow"></span>Exporter</button>`;
   if(open.length) html+=sec(isToday?'Tâches du jour':'Tâches',open.length)+`<div class="list">${open.map(taskRow).join('')}</div>`;
   if(late.length||lateR.length) html+=sec('En retard',late.length+lateR.length)+`<div class="list">${late.map(taskRow).join('')}${lateR.map(remRow).join('')}</div>`;
-  html+=sec('Ma journée','',`<span class="grow"></span><button class="btn sm ghost secbtn" data-a="slotEvent" data-v="">＋ Événement</button><button class="btn sm ghost secbtn" data-a="slotTask" data-v="">＋ Tâche</button>`)+dayTimeline(t,isToday,sug);
+  html+=sec('Ma journée')+dayTimeline(t,isToday,sug);
   if(sug.length>1) html+=`<button class="btn sm primary block" data-a="planAll" style="margin-top:0">✨ Caser automatiquement ${plural(sug.length,'tâche')}</button>`;
   if(rems.length) html+=sec('Rappels',rems.length)+`<div class="list">${rems.map(r=>remRow(r,t)).join('')}</div>`;
   if(monthT.length) html+=sec('🗓️ Ce mois-ci · '+fmtMonth(tm),monthT.length)+`<div class="list">${monthT.map(taskRow).join('')}</div>`;
@@ -839,9 +842,10 @@ function reviewCards(){
 function micDock(mode,fab){
   const on=!!mode&&recOn&&recMode===mode, sr=!!SRc();
   const plus=fab&&!on?`<button class="dockplus" data-a="${fab}" aria-label="Ajouter">+</button>`:'';
-  if(!mode) return `<div class="micdock">${plus}</div>`;
+  if(!mode) return `<div class="micdock"><div class="dockrow">${plus}</div></div>`;
+  const pills=mode==='jour'&&!on?`<div class="dockpills"><button class="dockpill" data-a="slotEvent" data-v="">＋ Événement</button><button class="dockpill" data-a="slotTask" data-v="">＋ Tâche</button></div>`:'';
   const ex={jour:[['dictPhoto','📸','Photo'],['typeNote','⌨️','Écrire']],task:[['taskPhoto','📸','Photo → tâche']],item:[['notePhoto','📸','Photo → note']],event:[]}[mode]||[];
-  return `${on?`<div class="livebox"><b>🎙️ Thêta écoute…</b><div id="dictLive" class="live"></div><small>Touchez ⏹ quand vous avez fini</small></div>`:''}<div class="micdock"><button id="micBtn" class="fabmic ${on?'rec':''}" data-a="mic" data-v="${mode}" ${sr?'':'disabled'} aria-label="${on?'Terminer':'Thêta écoute'}">${on?'⏹':'🎙️'}</button>${plus}${on?'':ex.map(([a,i,l])=>`<button class="dockbtn" data-a="${a}" aria-label="${l}">${i}</button>`).join('')}</div>`;
+  return `${on?`<div class="livebox"><b>🎙️ Thêta écoute…</b><div id="dictLive" class="live"></div><small>Touchez ⏹ quand vous avez fini</small></div>`:''}<div class="micdock">${pills}<div class="dockrow"><button id="micBtn" class="fabmic ${on?'rec':''}" data-a="mic" data-v="${mode}" ${sr?'':'disabled'} aria-label="${on?'Terminer':'Thêta écoute'}">${on?'⏹':'🎙️'}</button>${plus}${on?'':ex.map(([a,i,l])=>`<button class="dockbtn" data-a="${a}" aria-label="${l}">${i}</button>`).join('')}</div></div>`;
 }
 function dictCard(mode){
   const sr=!!SRc(), on=recOn&&recMode===mode;

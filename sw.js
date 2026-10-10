@@ -1,6 +1,6 @@
 // Thêta — service worker (hors ligne, partage entrant, polices)
 // Changez ce numéro à chaque mise à jour de index.html pour forcer le rafraîchissement.
-const CACHE = 'theta-v3.5.1';
+const CACHE = 'theta-v3.5.2';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -47,7 +47,7 @@ self.addEventListener('fetch', e => {
   // Page : réseau d'abord (pour recevoir les mises à jour), cache si hors ligne
   if (req.mode === 'navigate') {
     e.respondWith(
-      fetch(req)
+      fetch(req.url, { cache: 'no-store', credentials: 'same-origin' })
         .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put('./index.html', copy)); return res; })
         .catch(() => caches.match('./index.html').then(r => r || caches.match('./')))
     );
