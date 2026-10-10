@@ -402,7 +402,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.7.2';
+const VERSION='3.7.3';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -1172,14 +1172,14 @@ function taskSheet(x,preset){
   const when=v.month?'month':(v.date?'day':'none');
   sheetSteps=((x&&x.steps)||[]).map(st=>({...st})); sheetImgs=[...((x&&x.images)||pr.images||[])];
   openSheet(isNew?'Nouvelle tâche':'Modifier la tâche',
-    fld('Intitulé',`<div class="kbdrow">${inp('title',v.title,'text','autofocus placeholder="Facultatif si photo"')}${isNew?'<button type="button" class="icon-btn" data-a="focusField" data-id="title" aria-label="Écrire le titre">⌨️</button>':''}</div>`)+
+    fld('Intitulé',inp('title',v.title,'text','autofocus placeholder="Facultatif si photo"'))+
     fld('Échéance',`<div onchange="thetaWhen(this)">${seg('when',[['day','📅 Un jour'],['month','🗓️ Un mois'],['none','Sans date']],when)}</div>`)+
     `<div class="row2" id="wDay" style="${when==='day'?'':'display:none'}">${fld('Date',inp('date',v.date||today(),'date'))}${fld('Heure (optionnel)',inp('time',v.time,'time'))}</div>`+
     `<div id="wMonth" style="${when==='month'?'':'display:none'}">${fld('Mois',inp('month',v.month||curMonth(),'month'))}</div>`+
     fld('Priorité',seg('priority',[['haute','🔴 Haute'],['moyenne','🟠 Moyenne'],['basse','🟢 Basse']],v.priority))+
     `<div class="row2">${fld('Durée estimée',selF('duration',[15,30,45,60,90,120,180,240].map(m=>[m,fmtDur(m)]),v.duration||30))}${fld('Répétition',selF('recur',RTASK,v.recur||'none'))}</div>`+
     fld('Sous-étapes',stepsHTML())+
-    fld('Photos',imgBoxHTML())+
+    fld('Photos',imgBoxHTML(isNew?'title':''))+
     fld('Note',`<textarea name="notes" style="min-height:60px">${esc(v.notes||'')}</textarea>`)+
     (x&&x.noSync?`<label class="srow"><span class="grow small">Ne plus synchroniser avec Google (supprimée de l'agenda)</span><input type="checkbox" class="sw" name="noSync" checked></label>`:''),
     {onSave(fd){
@@ -1316,9 +1316,9 @@ function itemSheet(it,pre){
   const isNew=!it; it=it||{id:uid(),folderId:todoFolder,text:'',done:false,images:[],steps:[],created:Date.now()};
   sheetImgs=[...((pre&&pre.images)||it.images||[])]; sheetSteps=(it.steps||[]).map(st=>({...st}));
   openSheet(isNew?'Nouvelle note':'Note',
-    fld('Texte',`${isNew?'<div class="kbdrow kbd-end"><button type="button" class="icon-btn" data-a="focusField" data-id="text" aria-label="Écrire la note">⌨️</button></div>':''}<textarea name="text" ${isNew?'autofocus':''} placeholder="Votre note…">${esc(it.text)}</textarea>`)+
+    fld('Texte',`<textarea name="text" ${isNew?'autofocus':''} placeholder="Votre note…">${esc(it.text)}</textarea>`)+
     fld('Sous-éléments',stepsHTML())+
-    fld('Photos',imgBoxHTML())+
+    fld('Photos',imgBoxHTML(isNew?'text':''))+
     fld('Dossier',`<select name="folderId">${folderOptions(it.folderId)}</select>`),
     {onSave(fd){const text=fd.text.trim();if(!text&&!sheetImgs.length)return false;commitImgs(it);it.steps=readSteps();it.text=text||'Photo';it.folderId=fd.folderId||null;if(isNew)S.items.push(it);save();render();if(isNew)toast('📝 Note ajoutée')},
      onDelete:isNew?null:()=>{closeSheet();removeUndo('items',it,'Note')}});
@@ -1330,8 +1330,8 @@ function stepsHTML(){return `<div id="stepBox" class="steps">${sheetSteps.map(st
 function refreshSteps(){const b=$('#stepBox');if(b){b.outerHTML=stepsHTML();const i=$('#stepIn');if(i)i.focus()}}
 function readSteps(){const i=$('#stepIn');if(i&&i.value.trim())sheetSteps.push({id:uid(),t:i.value.trim(),done:false});return sheetSteps.filter(x=>x.t.trim()).map(x=>({...x,t:x.t.trim()}))}
 const stepsTag=o=>o.steps&&o.steps.length?`<span class="tag">☑ ${o.steps.filter(x=>x.done).length}/${o.steps.length}</span>`:'';
-function imgBoxHTML(){return `<div class="imgedit" id="imgBox">${sheetImgs.map(id=>`<div><img data-img="${id}" data-a="viewImg" data-id="${id}" alt=""><button type="button" data-a="sheetImgDel" data-id="${id}" aria-label="Retirer">✕</button></div>`).join('')}<button type="button" class="icon-btn imgadd" data-a="sheetImgAdd" data-v="cam" aria-label="Prendre une photo">📸</button><button type="button" class="icon-btn imgadd" data-a="sheetImgAdd" data-v="gal" aria-label="Galerie">🖼️</button></div>`}
-function refreshImgBox(){const b=$('#imgBox');if(!b)return;b.outerHTML=imgBoxHTML();$$('#imgBox img[data-img]').forEach(async im=>{const u=await imgURL(im.dataset.img);if(u)im.src=u})}
+function imgBoxHTML(kbd=''){return `<div class="imgedit" id="imgBox" data-kbd="${kbd}">${sheetImgs.map(id=>`<div><img data-img="${id}" data-a="viewImg" data-id="${id}" alt=""><button type="button" data-a="sheetImgDel" data-id="${id}" aria-label="Retirer">✕</button></div>`).join('')}<button type="button" class="icon-btn imgadd" data-a="sheetImgAdd" data-v="cam" aria-label="Prendre une photo">📸</button>${kbd?`<button type="button" class="icon-btn imgadd" data-a="focusField" data-id="${kbd}" aria-label="Écrire">⌨️</button>`:''}<button type="button" class="icon-btn imgadd" data-a="sheetImgAdd" data-v="gal" aria-label="Galerie">🖼️</button></div>`}
+function refreshImgBox(){const b=$('#imgBox');if(!b)return;b.outerHTML=imgBoxHTML(b.dataset.kbd||'');$$('#imgBox img[data-img]').forEach(async im=>{const u=await imgURL(im.dataset.img);if(u)im.src=u})}
 function commitImgs(obj){const removed=(obj.images||[]).filter(i=>!sheetImgs.includes(i));removed.forEach(i=>IDB.del(i).catch(()=>{}));obj.images=sheetImgs.slice()}
 const coverHTML=o=>o.images&&o.images.length?`<img class="cover" data-img="${o.images[0]}" data-a="viewImg" data-id="${o.images[0]}" alt="">`:'';
 
