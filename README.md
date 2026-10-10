@@ -1,6 +1,19 @@
-# Thêta — v2.2
+# Thêta — v3.0
 
 Web-app personnelle, 100 % locale, hors ligne, installable sur Android.
+
+
+## Nouveautés v3
+- **Écran Jour** : frise des 7 prochains jours (glisser du doigt ou toucher un jour) ; tâches et rappels faits passent dans « Accompli », décochables ; vacances scolaires affichées.
+- **🎙️ Thêta écoute** partout : Jour (tri automatique), Tâches (tout devient tâche), Notes (chaque phrase devient un élément du dossier).
+- **📝 Notes** (ex-Todo) : 📸 photo directe, 🖼️ galerie, sous-éléments à cocher.
+- **Tâches** : sous-étapes, répétition (chaque jour, lun → ven, chaque semaine, chaque mois).
+- **🔍 Recherche** dans tout Thêta (loupe en haut de chaque écran).
+- **Agenda** : lieu cliquable vers Google Maps ; vacances scolaires (Réglages › Organisation › zone).
+- **Bibliothèques** : photos, scan du code-barres d'un livre ; prêts groupés par personne, par type ou par date.
+- **Réglages** : choix de la police.
+- **Google** : rappels envoyés dans Google Agenda avec alerte (le téléphone sonne même Thêta fermée) ; sauvegarde automatique quotidienne sur Google Drive (activer « Google Drive API » dans la console Google, puis Plus › Google Agenda › Autoriser Google Drive).
+- **Partager vers Thêta** : depuis n'importe quelle app, bouton Partager › Thêta (après réinstallation de l'app sur l'écran d'accueil).
 
 ## Fichiers à mettre dans le dépôt GitHub
 
