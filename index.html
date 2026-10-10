@@ -425,6 +425,10 @@ const PALETTES={
     dark:{bg:'#16100b',card:'#211811',card2:'#2c2118',card3:'#392b20'},light:{bg:'#faf3ea',card:'#ffffff',card2:'#f3e7d8',card3:'#e8d6c0'}},
 };
 const palPairs=P=>[...Object.values(P.tabs),...P.extra];
+// Toutes les couleurs disponibles pour un dossier (défaut + toutes les palettes, sans doublon)
+const ALL_GRADS=[...new Set([...GRADS0,...Object.values(PALETTES).flatMap(P=>palPairs(P).map(([x,y])=>`linear-gradient(135deg,${x},${y})`))])];
+// Une couleur de dossier est soit une dégradé complet (nouveau), soit un index (ancien format)
+const gradOf=c=>typeof c==='string'?c:GRADS[(c||0)%GRADS.length];
 const TAB_ICONS={jour:['☀️','🌤️','🌞','🏠','🌅','⭐','🧭','🌈','🍃','☕'],taches:['✅','☑️','✔️','📋','📌','🎯','🏁','⚡','🧩','💪','🚀','🔖'],todo:['📝','🗒️','📒','📓','💡','📂','🗂️','🖊️','🧠','📎'],agenda:['📅','🗓️','📆','⏰','🕒','⌚','🔔','🗺️']};
 const tabIcon=k=>(S.settings.tabIcons&&S.settings.tabIcons[k])||TABS[k][0];
 const LIBT={livre:['📖','Livre'],film:['🎬','Film'],serie:['📺','Série'],bd:['💬','BD']};
@@ -813,7 +817,7 @@ function folderOptions(sel,exclude=[]){
 }
 function tile(f){
   const n=countOpen(f.id), kids=S.folders.filter(x=>x.parentId===f.id);
-  return `<button class="tile" data-a="openFolder" data-id="${f.id}" style="background:${GRADS[(f.color||0)%GRADS.length]}"><span class="ic">${esc(f.icon||'📁')}</span><span><b>${esc(f.name)}</b><br><small>${n?n+' à faire':'À jour ✓'}</small></span>${kids.length?`<span class="pills">${kids.slice(0,4).map(k=>`<span class="pill" data-a="openFolder" data-id="${k.id}">${esc(k.icon||'📁')} ${esc(k.name)}</span>`).join('')}${kids.length>4?`<span class="pill">+${kids.length-4}</span>`:''}</span>`:''}</button>`;
+  return `<button class="tile" data-a="openFolder" data-id="${f.id}" style="background:${gradOf(f.color)}"><span class="ic">${esc(f.icon||'📁')}</span><span><b>${esc(f.name)}</b><br><small>${n?n+' à faire':'À jour ✓'}</small></span>${kids.length?`<span class="pills">${kids.map(k=>`<span class="pill" data-a="openFolder" data-id="${k.id}">${esc(k.icon||'📁')} ${esc(k.name)}</span>`).join('')}</span>`:''}</button>`;
 }
 function itemRow(i){
   return `<div class="item todo-item ${i.done?'done':''} ${(i.steps&&i.steps.length)||(i.images&&i.images.length)||subAddFor==='item:'+i.id?'top':''}" data-id="${i.id}">${i.done?'':'<span class="handle" aria-label="Déplacer">⠿</span>'}<button class="chk round ${i.done?'on':''}" data-a="toggleItem" data-id="${i.id}"></button><div class="grow" data-a="editItem" data-id="${i.id}"><div class="ttl">${linkify(esc(i.text))}</div>${subList(i,'item')}${i.images&&i.images.length?`<div class="thumbs">${i.images.map(id=>`<img data-img="${id}" data-a="viewImg" data-id="${id}" alt="">`).join('')}</div>`:''}</div>${i.done?'':subBtn(i,'item')}</div>`;
@@ -1176,12 +1180,12 @@ async function scanIsbnFile(f){
   }catch(e){toast('⚠️ Scan impossible : '+e.message)}
 }
 function folderSheet(f,parentId){
-  const isNew=!f, v=f||{name:'',color:Math.floor(Math.random()*GRADS.length),icon:'📁',parentId};
+  const isNew=!f, v=f||{name:'',color:ALL_GRADS[Math.floor(Math.random()*ALL_GRADS.length)],icon:'📁',parentId};
   openSheet(isNew?'Nouveau dossier':'Dossier « '+f.name+' »',
     `<div class="row2" style="grid-template-columns:80px 1fr">${fld('Icône',inp('icon',v.icon||'📁','text','maxlength="4" style="text-align:center;font-size:20px"'))}${fld('Nom',inp('name',v.name,'text','required autofocus'))}</div>`+
-    fld('Couleur',`<div class="swatches">${GRADS.map((g,i)=>`<label><input type="radio" name="color" value="${i}" ${i==v.color?'checked':''}><span style="background:${g}"></span></label>`).join('')}</div>`)+
+    fld('Couleur',`<div class="swatches">${ALL_GRADS.map((g,i)=>`<label><input type="radio" name="color" value="${i}" ${g===gradOf(v.color)?'checked':''}><span style="background:${g}"></span></label>`).join('')}</div>`)+
     fld('Dans le dossier',`<select name="parentId">${folderOptions(v.parentId,f?[f.id,...descendants(f.id)]:[])}</select>`),
-    {onSave(fd){const name=fd.name.trim();if(!name)return false;const o=f||{id:uid()};Object.assign(o,{name,icon:fd.icon.trim()||'📁',color:+fd.color,parentId:fd.parentId||null});if(isNew)S.folders.push(o);save();render();toast(isNew?'📁 Dossier créé':'Dossier modifié')},
+    {onSave(fd){const name=fd.name.trim();if(!name)return false;const o=f||{id:uid()};Object.assign(o,{name,icon:fd.icon.trim()||'📁',color:ALL_GRADS[+fd.color]||ALL_GRADS[0],parentId:fd.parentId||null});if(isNew)S.folders.push(o);save();render();toast(isNew?'📁 Dossier créé':'Dossier modifié')},
      onDelete:isNew?null:()=>{
        const ids=[f.id,...descendants(f.id)], its=S.items.filter(i=>ids.includes(i.folderId));
        if(!confirm(`Supprimer « ${f.name} »${ids.length>1?', ses '+(ids.length-1)+' sous-dossier(s)':''} et ${plural(its.length,'élément')} ? Action définitive.`)) return;
