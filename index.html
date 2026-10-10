@@ -280,6 +280,10 @@ body.navtop .livebox{bottom:calc(96px + env(safe-area-inset-bottom))}
 .bgt.match::before{content:"Assorti";position:absolute;top:6px;left:6px;font-size:10px;font-weight:800;background:#fff;color:#1a1a1a;border-radius:6px;padding:1px 6px;z-index:1}
 .dockplus{width:50px;height:50px;border-radius:50%;border:0;font-size:28px;line-height:1;color:#fff;background:linear-gradient(135deg,var(--a2),var(--a1));box-shadow:0 8px 20px color-mix(in srgb,var(--a2) 40%,transparent)}
 .linkbtn{border:0;background:none;color:var(--a1);font-weight:700;text-decoration:underline;padding:0;font-size:inherit}
+.bgcols{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:none}.bgcols::-webkit-scrollbar{display:none}
+.bgc{flex:none;width:74px;border:0;background:none;padding:0;display:flex;flex-direction:column;align-items:center;gap:4px;color:var(--text)}
+.bgcthumb{display:block;width:74px;height:100px;border-radius:12px;background:var(--card2) center/cover;border:3px solid transparent}
+.bgc.on .bgcthumb{border-color:var(--a1)}.bgc small{font-size:11px;font-weight:650;text-align:center;line-height:1.2}
 /* Forms */
 .fld{display:block;margin:10px 0}
 .fld>span{display:block;font-size:12.5px;font-weight:650;color:var(--muted);margin:0 0 5px 2px}
@@ -355,7 +359,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.5.4';
+const VERSION='3.6.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -437,7 +441,7 @@ function defaults(){
   return {tasks:[],events:[],items:[],notes:[],reminders:[],habits:[],ideas:[],loans:[],syncDeletes:[],draft:'',
     folders:[tr,f('Conseil des maîtres',tr.id,3,'🧑‍🏫'),f('Conseil du vendredi',tr.id,5,'🗓️'),f("Conseil d'école",tr.id,1,'🏫'),f('Conseil de cycle',tr.id,4,'🔄'),f('Achat pour la classe',tr.id,6,'🛒'),f('Travaux',null,2,'🔨')],
     settings:{navPos:'bottom',theme:'dark',accent:'nuit',tabOrder:['jour','taches','todo','agenda','notes'],dayStart:'08:00',dayEnd:'20:00',defaultDuration:30,
-      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'p_theta',bgBright:100,bgVeil:45,bgBlur:0,bgVer:0,font:'system',homeAdd:false,homePhoto:false,homeKeyboard:false,palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
+      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'shape',bgShape:'montagnes',bgColor:'auto',bgBright:100,bgVeil:45,bgBlur:0,bgVer:0,font:'system',homeAdd:false,homePhoto:false,homeKeyboard:false,palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
 }
 function load(){
   try{const raw=localStorage.getItem(KEY);S=raw?JSON.parse(raw):defaults()}catch(e){S=defaults()}
@@ -448,6 +452,10 @@ function normalizeState(){
   for(const k in d) if(S[k]===undefined) S[k]=d[k];
   S.settings={...d.settings,...S.settings};
   if(!S.settings._lift2){ if(+S.settings.navLift===18) S.settings.navLift=4; S.settings._lift2=true; }
+  if(!S.settings._bg3){ const b=S.settings.bg;
+    if(b&&b.startsWith('p_')){S.settings.bgShape='montagnes';S.settings.bgColor=b.slice(2)===S.settings.palette?'auto':b.slice(2);S.settings.bg='shape'}
+    else if(['brume','aube','lac','jardin'].includes(b)){S.settings.bgShape=b==='brume'?'montagnes':b;S.settings.bgColor='naturel';S.settings.bg='shape'}
+    S.settings._bg3=true; S.settings._bg2=true; }
   if(!S.settings._bg2){ if(S.settings.bg==='brume'&&S.settings.palette) S.settings.bg='p_'+S.settings.palette; S.settings._bg2=true; }
   const order=S.settings.tabOrder.filter(k=>TABS[k]);
   for(const k of Object.keys(TABS)) if(!order.includes(k)) order.push(k);
@@ -501,17 +509,47 @@ Object.entries(PALETTES).forEach(([k,P])=>{ZEN['p_'+k]={name:P.name,pal:k,svg(){
 const bgOrder=()=>{const m='p_'+S.settings.palette,E=Object.entries(ZEN);return [...E.filter(([k])=>k===m),...E.filter(([k,z])=>z.pal&&k!==m),...E.filter(([k,z])=>!z.pal)]};
 const zenURL=k=>zenCache[k]||(zenCache[k]='data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">${ZEN[k].svg()}</svg>`));
 let hasCustomBg=false;
+const SHAPES=[['montagnes','Montagnes'],['aube','Aube'],['lac','Lac'],['vagues','Vagues'],['jardin','Jardin zen'],['degrade','Dégradé']];
+const NATURAL={montagnes:'brume',aube:'aube',lac:'lac',jardin:'jardin'};
+const NEUTRAL={top:'#7fa7c9',mid:'#dbe7ef',bot:'#eef3f6',r:['#9db8cf','#7f9fbd','#6488a9','#4b7194','#355a7c'],w1:'#7aa6c6',w2:'#2f5f86',sand:'#ece4d4',line:'#d6c8ae',stone:'#6f706b',moss:'#7f9a6a'};
+function scheme(c){
+  const k=c==='auto'?S.settings.palette:c, P=PALETTES[k]; if(!P) return NEUTRAL;
+  const T=Object.values(P.tabs), L=P.light;
+  return {top:T[3][0],mid:L.card2,bot:L.bg,r:[T[4][0],T[1][0],T[0][0],T[2][1],T[3][1]],w1:T[1][0],w2:T[0][1],sand:L.card2,line:L.card3,stone:T[3][1],moss:T[2][0]};
+}
+function wave(y,amp,f,ph){let d=`M0 800 L0 ${y}`;for(let x=0;x<=400;x+=8)d+=` L${x} ${(y+Math.sin(x/f+ph)*amp+Math.sin(x/(f*.43)+ph*1.7)*amp*.25).toFixed(1)}`;return d+' L400 800 Z'}
+function shapeSVG(sh,C){
+  const sky=`<defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.top}" stop-opacity=".55"/><stop offset=".55" stop-color="${C.mid}"/><stop offset="1" stop-color="${C.bot}"/></linearGradient><radialGradient id="s"><stop offset="0" stop-color="#fff"/><stop offset=".35" stop-color="#fff" stop-opacity=".75"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient><filter id="f"><feGaussianBlur stdDeviation="14"/></filter><filter id="b"><feGaussianBlur stdDeviation="40"/></filter></defs><rect width="400" height="800" fill="${C.bot}"/><rect width="400" height="800" fill="url(#g)"/>`;
+  let o=sky;
+  if(sh==='montagnes'){o+=`<circle cx="270" cy="232" r="54" fill="#fff" opacity=".72"/>`;C.r.forEach((c,i)=>{o+=`<path d="${ridge(380+i*88,24-i*2,i*1.7)}" fill="${c}" opacity="${(.5+i*.1).toFixed(2)}"/><ellipse cx="${120+(i*60)%300}" cy="${400+i*88}" rx="260" ry="24" fill="${C.bot}" opacity=".45" filter="url(#f)"/>`})}
+  else if(sh==='aube'){o+=`<circle cx="200" cy="440" r="170" fill="url(#s)"/><circle cx="200" cy="440" r="46" fill="#fff" opacity=".95"/>`;C.r.forEach((c,i)=>{o+=`<path d="${ridge(470+i*70,22-i*2,i*2.4+1)}" fill="${c}" opacity="${(.7+i*.06).toFixed(2)}"/>`})}
+  else if(sh==='lac'){o+=`<circle cx="120" cy="300" r="40" fill="#fff" opacity=".8"/><path d="${ridge(470,30,.6)}" fill="${C.r[1]}"/><path d="${ridge(515,18,2.1)}" fill="${C.r[3]}"/><defs><linearGradient id="w" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${C.w1}"/><stop offset="1" stop-color="${C.w2}"/></linearGradient></defs><rect y="545" width="400" height="255" fill="url(#w)"/><ellipse cx="120" cy="600" rx="34" ry="5" fill="#fff" opacity=".45"/>`;for(let i=0;i<14;i++){o+=`<rect x="${(i*73)%300}" y="${575+i*16}" width="${60+(i*37)%90}" height="1.6" rx="1" fill="#fff" opacity="${(.28-i*.015).toFixed(3)}"/>`}}
+  else if(sh==='vagues'){o+=`<circle cx="280" cy="260" r="50" fill="#fff" opacity=".75"/>`;C.r.forEach((c,i)=>{o+=`<path d="${wave(470+i*62,14+i*2,46+i*7,i*1.3)}" fill="${c}" opacity="${(.55+i*.09).toFixed(2)}"/>`})}
+  else if(sh==='jardin'){o=`<rect width="400" height="800" fill="${C.sand}"/>`;for(let y=6;y<800;y+=13){let d=`M0 ${y}`;for(let x=0;x<=400;x+=10)d+=` L${x} ${(y+Math.sin(x/38+y/50)*2.2).toFixed(1)}`;o+=`<path d="${d}" stroke="${C.line}" stroke-width="2.2" fill="none"/>`}
+    const ring=(cx,cy,n)=>{for(let r=22+n*13;r>=22;r-=13)o+=`<circle cx="${cx}" cy="${cy}" r="${r}" fill="${C.sand}" stroke="${C.line}" stroke-width="2.2"/>`};ring(110,290,8);ring(290,570,9);
+    o+=`<ellipse cx="112" cy="294" rx="30" ry="21" fill="${C.stone}"/><ellipse cx="104" cy="284" rx="13" ry="6" fill="#fff" opacity=".25"/><ellipse cx="290" cy="575" rx="38" ry="24" fill="${C.stone}"/><ellipse cx="315" cy="590" rx="18" ry="12" fill="${C.stone}" opacity=".8"/><ellipse cx="296" cy="555" rx="22" ry="7" fill="${C.moss}" opacity=".6"/>`}
+  else if(sh==='degrade'){o+=`<circle cx="80" cy="180" r="160" fill="${C.r[0]}" opacity=".45" filter="url(#b)"/><circle cx="330" cy="420" r="180" fill="${C.r[2]}" opacity=".4" filter="url(#b)"/><circle cx="120" cy="680" r="190" fill="${C.r[4]}" opacity=".45" filter="url(#b)"/>`}
+  return o;
+}
+const bgCache={};
+function bgURL(sh,c){
+  const k=c==='auto'?(PALETTES[S.settings.palette]?S.settings.palette:'naturel'):c;
+  if(k==='naturel'&&NATURAL[sh]) return zenURL(NATURAL[sh]);
+  const key=sh+'|'+k; if(bgCache[key]) return bgCache[key];
+  return bgCache[key]='data:image/svg+xml,'+encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 800" preserveAspectRatio="xMidYMid slice">${shapeSVG(sh,k==='naturel'?NEUTRAL:scheme(k))}</svg>`);
+}
 async function applyBg(){
   const s=S.settings, el=$('#bg'), on=s.bg&&s.bg!=='none';
   document.body.classList.toggle('hasbg',!!on);
   $('#bgVeil').style.opacity=on?s.bgVeil/100:1;
   el.style.filter=on?[+s.bgBlur?`blur(${s.bgBlur}px)`:'',`brightness(${(+s.bgBright||100)/100})`].join(' ').trim():'';
-  const key=on?s.bg+':'+(s.bg==='custom'?s.bgVer:''):'none';
+  const sh=SHAPES.some(x=>x[0]===s.bgShape)?s.bgShape:'montagnes';
+  const key=!on?'none':s.bg==='custom'?'custom:'+s.bgVer:sh+'|'+(s.bgColor==='auto'?'auto:'+s.palette:s.bgColor);
   if(el.dataset.k===key) return;
   el.dataset.k=key;
   if(!on){el.style.backgroundImage='';return}
   let url=s.bg==='custom'?await imgURL('bg_custom'):null;
-  if(!url) url=zenURL(ZEN[s.bg]?s.bg:'brume');
+  if(!url) url=bgURL(sh,s.bgColor||'auto');
   el.style.backgroundImage=`url("${url}")`;
 }
 
@@ -946,7 +984,9 @@ SUBS.reglages=()=>{
   <div class="small muted" style="margin-top:4px">Remontez la barre si les boutons de votre téléphone la cachent.</div></div>`;
   const fk0=FONTS[s.font]?s.font:'system';
   html+=sec('Police')+`<div class="card fonts"><button class="fontopt fontcur" data-a="fontToggle" style="font-family:${esc(FONTS[fk0][1])}"><span class="grow"><b>${FONTS[fk0][0]}</b><small>Conseil de cycle jeudi 17h — 0123456789</small></span><span class="fcaret">${fontOpen?'▴':'▾'}</span></button>${fontOpen?Object.entries(FONTS).filter(([k])=>k!==fk0).map(([k,[l,ff]])=>`<button class="fontopt" data-a="setFont" data-id="${k}" style="font-family:${esc(ff)}"><b>${l}</b><small>Conseil de cycle jeudi 17h — 0123456789</small></button>`).join(''):''}</div>`;
-  html+=sec('Fond d\'écran')+`<div class="card"><div class="bgs">${[['none','Aucun'],...bgOrder().map(([k,z])=>[k,z.pal?'🎨 '+z.name:z.name])].map(([k,l])=>`<button class="bgt ${s.bg===k?'on':''} ${k==='p_'+s.palette?'match':''}" data-a="setBg" data-id="${k}" style="${ZEN[k]?`background-image:url('${zenURL(k)}')`:''}">${k==='none'?'<span style="position:static;background:none;color:var(--muted)">Uni</span>':`<span>${l}</span>`}</button>`).join('')}${hasCustomBg?`<button class="bgt ${s.bg==='custom'?'on':''}" data-a="setBg" data-id="custom"><img data-img="bg_custom" alt=""><span>Ma photo</span></button>`:''}<button class="bgt add" data-a="pickBg"><b style="font-size:22px">📷</b>Depuis le téléphone</button></div>
+  const bsh=SHAPES.some(x=>x[0]===s.bgShape)?s.bgShape:'montagnes', bshape=s.bg==='none'?'none':s.bg==='custom'?'custom':bsh, bcol=s.bgColor||'auto';
+  html+=sec('Fond d\'écran')+`<div class="card"><div class="fld" style="margin-top:0"><span>1. Choisissez la forme</span><div class="bgs">${SHAPES.map(([k,l])=>`<button class="bgt ${bshape===k?'on':''}" data-a="setBgShape" data-id="${k}" style="background-image:url('${bgURL(k,bcol)}')"><span>${l}</span></button>`).join('')}<button class="bgt ${bshape==='none'?'on':''}" data-a="setBgShape" data-id="none"><span style="position:static;background:none;color:var(--muted)">Uni</span></button>${hasCustomBg?`<button class="bgt ${bshape==='custom'?'on':''}" data-a="setBg" data-id="custom"><img data-img="bg_custom" alt=""><span>Ma photo</span></button>`:''}<button class="bgt add" data-a="pickBg"><b style="font-size:22px">📷</b>Depuis le téléphone</button></div></div>
+  ${bshape==='none'||bshape==='custom'?'':`<div class="fld"><span>2. Choisissez la couleur</span><div class="bgcols">${[['auto','Selon ma palette'],['naturel','Naturelle'],...Object.entries(PALETTES).map(([k,P])=>[k,P.name])].map(([k,l])=>`<button class="bgc ${bcol===k?'on':''}" data-a="setBgColor" data-id="${k}"><span class="bgcthumb" style="background-image:url('${bgURL(bsh,k)}')"></span><small>${l}</small></button>`).join('')}</div></div>`}
   <div class="range"><span class="small">Voile</span><input type="range" min="0" max="85" step="5" value="${s.bgVeil}" data-r="bgVeil" aria-label="Voile"><b>${s.bgVeil} %</b></div>
   <div class="range"><span class="small">Flou&nbsp;</span><input type="range" min="0" max="16" step="1" value="${s.bgBlur}" data-r="bgBlur" aria-label="Flou"><b>${s.bgBlur} px</b></div>
   <div class="range"><span class="small">Luminosité</span><input type="range" min="40" max="140" step="5" value="${+s.bgBright||100}" data-r="bgBright" aria-label="Luminosité"><b>${+s.bgBright||100} %</b></div>
@@ -1858,9 +1898,11 @@ const A={
   fontToggle(){ fontOpen=!fontOpen; render(); },
   setFont(id){ S.settings.font=id; fontOpen=false; save(); render(); },
   setBg(id){ S.settings.bg=id; save(); render(); },
+  setBgShape(id){ if(id==='none'){S.settings.bg='none'}else{S.settings.bg='shape';S.settings.bgShape=id} save(); render(); },
+  setBgColor(id){ S.settings.bgColor=id; if(S.settings.bg==='none'||S.settings.bg==='custom') S.settings.bg='shape'; save(); render(); },
   pickBg(){ $('#fileBg').click(); },
   setTheme(id){ S.settings.theme=id; save(); render(); },
-  setPalette(id){ S.settings.palette=id; if(id&&S.settings.bg!=='custom'&&S.settings.bg!=='none'){S.settings.bg='p_'+id;$('#bg').dataset.k=''} save(); render(); toast(id?'🎨 Palette « '+PALETTES[id].name+' »':'🎨 Couleur unique'); },
+  setPalette(id){ S.settings.palette=id; save(); render(); toast(id?'🎨 Palette « '+PALETTES[id].name+' »':'🎨 Couleur unique'); },
   tabIconPick(k){ openSheet('Icône de l\'onglet '+TABS[k][1],`<div class="iconpick">${(TAB_ICONS[k]||[]).map(ic=>`<button type="button" class="${tabIcon(k)===ic?'on':''}" data-a="setTabIcon" data-id="${k}|${ic}">${ic}</button>`).join('')}</div>`); },
   iconEdit(k){ iconEdit=iconEdit===k?null:k; render(); },
   setTabIcon(v){ const i=v.indexOf('|'), k=v.slice(0,i), ic=v.slice(i+1); S.settings.tabIcons={...(S.settings.tabIcons||{}),[k]:ic}; save(); if(sheetOpen) closeSheet(); render(); toast('Icône de « '+TABS[k][1]+' » : '+ic); },
