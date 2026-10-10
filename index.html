@@ -14,7 +14,7 @@
 html[data-theme=dark]{--bg:#0c0e13;--card:#171a22;--card2:#20242f;--card3:#2c3140;--text:#eef1f7;--muted:#959db0;--line:rgba(255,255,255,.07);--glass:rgba(23,26,34,.74);--shadow:0 8px 24px rgba(0,0,0,.4);--relief:inset 0 1px 0 rgba(255,255,255,.05);--toast:#262b38}
 html[data-theme=light]{color-scheme:light;--bg:#eef1f6;--card:#fff;--card2:#f2f4f8;--card3:#e2e6ee;--text:#141821;--muted:#5d6577;--line:rgba(10,20,40,.09);--glass:rgba(255,255,255,.78);--shadow:0 8px 22px rgba(30,40,70,.10);--relief:inset 0 1px 0 rgba(255,255,255,.9);--toast:#1f2430}
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;background:var(--bg);color:var(--text)}
+html,body{margin:0;background:var(--bg);color:var(--text);overflow-x:clip;max-width:100%}
 body{font:15.5px/1.45 var(--font,system-ui,sans-serif);min-height:100dvh;overscroll-behavior-y:contain}
 button,input,select,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
@@ -200,7 +200,6 @@ body.hasbg .dchip:not(.on){background:color-mix(in srgb,var(--card) 80%,transpar
 .hd.on{background:#fff;color:var(--a2)}.hd.hol:not(.on){box-shadow:inset 0 -3px 0 #ffd43b}
 .hero .hero-top{margin-bottom:10px;align-items:center}
 body.vjour #main{touch-action:pan-y}
-#main{will-change:transform}
 .chips.fit{display:grid;grid-template-columns:repeat(var(--n),1fr);overflow:visible}
 .chips.fit .chip{padding:7px 1px;font-size:12.5px;text-align:center;min-width:0}
 .dictbtns{display:flex;gap:6px}
@@ -258,6 +257,8 @@ body.vjour #main{touch-action:pan-y}
 .iconrow{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
 .icsel{display:flex;flex-direction:column;align-items:center;gap:2px;padding:10px 4px 8px;border-radius:14px;background:var(--card2);border:2px solid transparent}
 .icsel span{font-size:26px}.icsel small{font-size:12px;font-weight:650}.icsel.on{border-color:var(--a1)}
+.fontcur{flex-direction:row!important;align-items:center;gap:10px;border-color:var(--a1)!important}
+.fontcur .grow{display:flex;flex-direction:column;gap:2px}.fcaret{font-size:18px;color:var(--muted)}
 /* Forms */
 .fld{display:block;margin:10px 0}
 .fld>span{display:block;font-size:12.5px;font-weight:650;color:var(--muted);margin:0 0 5px 2px}
@@ -332,7 +333,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.4.0';
+const VERSION='3.4.1';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -486,7 +487,7 @@ async function applyBg(){
 }
 
 /* ================= État d'interface ================= */
-let view='jour', sub=null, todoFolder=null, taskFilter='todo', libTab='ideas', libFilter='all', loanGroup='person', iconEdit=null, agendaPast=false, showLoansDone=false;
+let view='jour', sub=null, todoFolder=null, taskFilter='todo', libTab='ideas', libFilter='all', loanGroup='person', iconEdit=null, fontOpen=false, agendaPast=false, showLoansDone=false;
 
 /* ================= Rendu ================= */
 const VIEWS={}, SUBS={};
@@ -905,10 +906,10 @@ SUBS.reglages=()=>{
   <div class="fld"><span>Palette de couleurs</span><div class="pals">${Object.entries(PALETTES).map(([k,P])=>`<button class="pal ${s.palette===k?'on':''}" data-a="setPalette" data-id="${k}" style="background:${P[document.documentElement.dataset.theme||'dark'].card2}"><span class="pdots">${Object.values(P.tabs).map(([a,b])=>`<i style="background:linear-gradient(135deg,${a},${b})"></i>`).join('')}</span><b>${P.name}</b></button>`).join('')}<button class="pal ${!PALETTES[s.palette]?'on':''}" data-a="setPalette" data-id="" style="background:var(--card2)"><span class="pdots"><i style="background:linear-gradient(135deg,var(--a1),var(--a2))"></i></span><b>Couleur unique</b></button></div></div>
   ${PALETTES[s.palette]?'':`<div class="fld"><span>Couleur d'accent : ${ACCENTS[s.accent][0]}</span>`}<div class="swatches" ${PALETTES[s.palette]?'style="display:none"':''}>${Object.entries(ACCENTS).map(([k,[l,a,b]])=>`<button class="acc ${s.accent===k?'on':''}" style="background:linear-gradient(135deg,${a},${b})" data-a="setAccent" data-id="${k}" aria-label="${l}"></button>`).join('')}</div>${PALETTES[s.palette]?'':'</div>'}
   <div class="fld"><span>Barre de navigation</span>${chips([['bottom','⬇️ En bas'],['top','⬆️ En haut']],s.navPos,'setNav')}</div>
-  <div class="range"><span class="small">Hauteur de la barre</span><input type="range" min="0" max="60" step="2" value="${+s.navLift||0}" data-r="navLift" aria-label="Hauteur"><b>${+s.navLift||0} px</b></div>
+  <div class="range"><span class="small">Hauteur de la barre</span><input type="range" min="-16" max="60" step="2" value="${+s.navLift||0}" data-r="navLift" aria-label="Hauteur"><b>${+s.navLift||0} px</b></div>
   <div class="small muted" style="margin-top:4px">Remontez la barre si les boutons de votre téléphone la cachent.</div></div>`;
   const fk0=FONTS[s.font]?s.font:'system';
-  html+=sec('Police')+`<div class="card"><select data-c="setting" data-f="font" aria-label="Police">${Object.entries(FONTS).map(([k,[l]])=>`<option value="${k}" ${fk0===k?'selected':''}>${l}</option>`).join('')}</select><div class="fontprev" style="font-family:${esc(FONTS[fk0][1])}"><b>Conseil de cycle jeudi 17 h</b><br>Acheter des feutres pour la classe — 0123456789</div></div>`;
+  html+=sec('Police')+`<div class="card fonts"><button class="fontopt fontcur" data-a="fontToggle" style="font-family:${esc(FONTS[fk0][1])}"><span class="grow"><b>${FONTS[fk0][0]}</b><small>Conseil de cycle jeudi 17h — 0123456789</small></span><span class="fcaret">${fontOpen?'▴':'▾'}</span></button>${fontOpen?Object.entries(FONTS).filter(([k])=>k!==fk0).map(([k,[l,ff]])=>`<button class="fontopt" data-a="setFont" data-id="${k}" style="font-family:${esc(ff)}"><b>${l}</b><small>Conseil de cycle jeudi 17h — 0123456789</small></button>`).join(''):''}</div>`;
   html+=sec('Fond d\'écran')+`<div class="card"><div class="bgs">${[['none','Aucun'],...Object.entries(ZEN).map(([k,z])=>[k,z.name])].map(([k,l])=>`<button class="bgt ${s.bg===k?'on':''}" data-a="setBg" data-id="${k}" style="${ZEN[k]?`background-image:url('${zenURL(k)}')`:''}">${k==='none'?'<span style="position:static;background:none;color:var(--muted)">Uni</span>':`<span>${l}</span>`}</button>`).join('')}${hasCustomBg?`<button class="bgt ${s.bg==='custom'?'on':''}" data-a="setBg" data-id="custom"><img data-img="bg_custom" alt=""><span>Ma photo</span></button>`:''}<button class="bgt add" data-a="pickBg"><b style="font-size:22px">📷</b>Depuis le téléphone</button></div>
   <div class="range"><span class="small">Voile</span><input type="range" min="0" max="85" step="5" value="${s.bgVeil}" data-r="bgVeil" aria-label="Voile"><b>${s.bgVeil} %</b></div>
   <div class="range"><span class="small">Flou&nbsp;</span><input type="range" min="0" max="16" step="1" value="${s.bgBlur}" data-r="bgBlur" aria-label="Flou"><b>${s.bgBlur} px</b></div>
@@ -1646,24 +1647,27 @@ function slideTo(dir,apply){
   m.style.transition='transform .14s ease-in, opacity .14s'; m.style.transform=`translateX(${dir>0?-28:28}%)`; m.style.opacity='0';
   setTimeout(()=>{apply(); render(); m.style.transition='none'; m.style.transform=`translateX(${dir>0?28:-28}%)`; void m.offsetWidth;
     m.style.transition='transform .26s cubic-bezier(.2,.8,.2,1), opacity .22s'; m.style.transform=''; m.style.opacity=''; scrollTo({top:0});
-    setTimeout(()=>{sliding=false;m.style.transition=''},280)},140);
+    setTimeout(()=>{sliding=false;m.style.transition='';m.style.transform='';m.style.opacity=''},280)},140);
 }
 function goDay(n){n=Math.max(0,Math.min(6,n));if(n===jourOff)return;slideTo(n>jourOff?1:-1,()=>{jourOff=n})}
 document.addEventListener('touchstart',e=>{
   if(view!=='jour'||sub||sheetOpen||DND.s||sliding||e.touches.length>1||e.target.closest('.chips,.tchips,.hchips,input,textarea,select,.prop')){SW=null;return}
-  SW={x:e.touches[0].clientX,y:e.touches[0].clientY,on:false,dx:0};
+  SW={x:e.touches[0].clientX,y:e.touches[0].clientY,on:false,dx:0,sy:scrollY};
 },{passive:true});
 document.addEventListener('touchmove',e=>{
   if(!SW||DND.s) return; const t=e.touches[0], dx=t.clientX-SW.x, dy=t.clientY-SW.y;
-  if(!SW.on){ if(Math.abs(dx)>14&&Math.abs(dx)>Math.abs(dy)*1.4){SW.on=true;$('#main').style.transition='none'} else if(Math.abs(dy)>14){SW=null;return} else return; }
-  SW.dx=dx; const edge=(jourOff===0&&dx>0)||(jourOff===6&&dx<0), d=edge?dx/4:dx, m=$('#main');
+  if(!SW.on){ if(Math.abs(dy)>10||Math.abs(scrollY-SW.sy)>4){SW=null;return} if(Math.abs(dx)>30&&Math.abs(dx)>Math.abs(dy)*2.5){SW.on=true;SW.x+=dx>0?30:-30;$('#main').style.transition='none'} else return; }
+  const dx2=t.clientX-SW.x;
+  SW.dx=dx2; const edge=(jourOff===0&&dx2>0)||(jourOff===6&&dx2<0), d=edge?dx2/5:dx2*.85, m=$('#main');
   m.style.transform=`translateX(${d}px)`; m.style.opacity=String(1-Math.min(.45,Math.abs(d)/650));
 },{passive:true});
-document.addEventListener('touchend',()=>{
+const swipeEnd=cancel=>{
   if(!SW||!SW.on){SW=null;return} const dx=SW.dx; SW=null; const n=jourOff+(dx<0?1:-1);
-  if(Math.abs(dx)>60&&n>=0&&n<=6) slideTo(dx<0?1:-1,()=>{jourOff=n});
-  else{const m=$('#main');m.style.transition='transform .22s cubic-bezier(.2,.8,.2,1), opacity .2s';m.style.transform='';m.style.opacity=''}
-},{passive:true});
+  if(!cancel&&Math.abs(dx)>Math.max(90,innerWidth*.28)&&n>=0&&n<=6) slideTo(dx<0?1:-1,()=>{jourOff=n});
+  else{const m=$('#main');m.style.transition='transform .22s cubic-bezier(.2,.8,.2,1), opacity .2s';m.style.transform='';m.style.opacity='';setTimeout(()=>{if(!sliding)m.style.transition=''},240)}
+};
+document.addEventListener('touchend',()=>swipeEnd(false),{passive:true});
+document.addEventListener('touchcancel',()=>swipeEnd(true),{passive:true});
 
 /* ================= Toast ================= */
 let toastT;
@@ -1794,7 +1798,8 @@ const A={
   editLoan(id){ const l=S.loans.find(x=>x.id===id); if(l) loanSheet(l); },
   loanBack(id){ const l=S.loans.find(x=>x.id===id); if(!l) return; l.returned=today(); save(); render(); toast('📚 « '+l.title+' » rendu','Annuler',()=>{l.returned=null;save();render()}); },
   // Réglages
-  setFont(id){ S.settings.font=id; save(); render(); },
+  fontToggle(){ fontOpen=!fontOpen; render(); },
+  setFont(id){ S.settings.font=id; fontOpen=false; save(); render(); },
   setBg(id){ S.settings.bg=id; save(); render(); },
   pickBg(){ $('#fileBg').click(); },
   setTheme(id){ S.settings.theme=id; save(); render(); },
