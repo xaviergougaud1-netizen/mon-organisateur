@@ -56,7 +56,7 @@ body.navtop #nav{bottom:auto;top:calc(8px + env(safe-area-inset-top))}
 #nav button{flex:1;min-width:0;border:0;background:none;color:var(--muted);display:flex;flex-direction:column;align-items:center;gap:2px;padding:4px 0;font-size:11px;font-weight:650;position:relative}
 #nav .ic{font-size:19px;line-height:30px;width:100%;max-width:56px;border-radius:16px;transition:background .2s}
 #nav button.on{color:var(--text)}
-#nav button.on .ic{background:linear-gradient(135deg,var(--a1),var(--a2));box-shadow:0 4px 12px color-mix(in srgb,var(--a1) 45%,transparent)}
+#nav button.on .ic{background:linear-gradient(135deg,var(--ta,var(--a1)),var(--tb,var(--a2)));box-shadow:0 4px 12px color-mix(in srgb,var(--ta,var(--a1)) 45%,transparent)}
 #nav .badge{position:absolute;top:0;right:calc(50% - 26px);background:#ff5d6c;color:#fff;font-style:normal;font-size:10px;min-width:17px;height:17px;border-radius:9px;display:grid;place-items:center;padding:0 4px}
 /* Generic */
 .sec{margin:22px 4px 8px;font-size:12.5px;font-weight:750;text-transform:uppercase;letter-spacing:.07em;color:var(--muted);display:flex;align-items:center;gap:8px}
@@ -242,6 +242,14 @@ body.vjour #main{touch-action:pan-y}
 .tl-now{position:absolute;left:38px;right:0;height:2px;background:#ff5d6c;z-index:3;pointer-events:none}
 .tl-now::before{content:"";position:absolute;left:-4px;top:-4px;width:10px;height:10px;border-radius:50%;background:#ff5d6c}
 .secbtn{padding:4px 9px!important;font-size:12px!important;text-transform:none;letter-spacing:0;border-radius:9px!important;color:var(--text)}
+.pals{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.pal{border:2px solid transparent;border-radius:14px;padding:9px 10px;display:flex;flex-direction:column;align-items:flex-start;gap:6px;text-align:left;color:var(--text)}
+.pal b{font-size:13.5px}.pal.on{border-color:var(--a1)}
+.pdots{display:flex;gap:4px}.pdots i{width:20px;height:20px;border-radius:7px}
+.iconpick{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:6px}
+.iconpick button{font-size:30px;border:2px solid var(--line);background:var(--card2);border-radius:16px;padding:10px 0}
+.iconpick button.on{border-color:var(--a1)}
+.hero-day{font-size:21px;font-weight:800;margin-top:2px}
 /* Forms */
 .fld{display:block;margin:10px 0}
 .fld>span{display:block;font-size:12.5px;font-weight:650;color:var(--muted);margin:0 0 5px 2px}
@@ -316,7 +324,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.2.0';
+const VERSION='3.3.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -356,7 +364,34 @@ const FONTS={system:['Système','system-ui,-apple-system,"Segoe UI",Roboto,"Noto
   atkinson:['Atkinson · très lisible','"Atkinson Hyperlegible",system-ui,sans-serif','Atkinson+Hyperlegible:wght@400;700']};
 function loadFont(k){const f=FONTS[k];if(!f||!f[2]||document.getElementById('font-'+k))return;const l=document.createElement('link');l.id='font-'+k;l.rel='stylesheet';l.href='https://fonts.googleapis.com/css2?family='+f[2]+'&display=swap';document.head.appendChild(l)}
 const TABS={jour:['☀️','Jour'],taches:['✅','Tâches'],todo:['📝','Notes'],agenda:['📅','Agenda']};
-const GRADS=['linear-gradient(135deg,#4c6ef5,#7048e8)','linear-gradient(135deg,#12b886,#0b7285)','linear-gradient(135deg,#f76707,#e03131)','linear-gradient(135deg,#ae3ec9,#5f3dc4)','linear-gradient(135deg,#f06595,#c2255c)','linear-gradient(135deg,#1c7ed6,#15aabf)','linear-gradient(135deg,#f59f00,#e8590c)','linear-gradient(135deg,#37b24d,#2b8a3e)'];
+let GRADS, GRADS0=['linear-gradient(135deg,#4c6ef5,#7048e8)','linear-gradient(135deg,#12b886,#0b7285)','linear-gradient(135deg,#f76707,#e03131)','linear-gradient(135deg,#ae3ec9,#5f3dc4)','linear-gradient(135deg,#f06595,#c2255c)','linear-gradient(135deg,#1c7ed6,#15aabf)','linear-gradient(135deg,#f59f00,#e8590c)','linear-gradient(135deg,#37b24d,#2b8a3e)'];
+GRADS=GRADS0;
+const PALETTES={
+  theta:{name:'Thêta (icône)',tabs:{jour:['#1d8fa0','#0b4f7a'],taches:['#2bb38a','#127a72'],todo:['#3aa7a0','#0f5f6e'],agenda:['#2a86c4','#0b4f7a'],plus:['#5fbf8f','#1f7a6a']},
+    extra:[['#7fd3a8','#2a9d8f'],['#0b4f7a','#06324f'],['#9bd8c8','#1d8fa0']],
+    dark:{bg:'#0a181d',card:'#112329',card2:'#18313a',card3:'#21404a'},light:{bg:'#e8f6ef',card:'#ffffff',card2:'#e0f1e8',card3:'#cbe7da'}},
+  ocean:{name:'Océan',tabs:{jour:['#3a86ff','#1d3fbf'],taches:['#06b6d4','#0369a1'],todo:['#14b8a6','#0f766e'],agenda:['#6366f1','#3730a3'],plus:['#0ea5e9','#075985']},
+    extra:[['#38bdf8','#1e40af'],['#22d3ee','#155e75'],['#818cf8','#4338ca']],
+    dark:{bg:'#081320',card:'#0f1e30',card2:'#16283d',card3:'#1f344d'},light:{bg:'#eaf3fb',card:'#ffffff',card2:'#e1ecf7',card3:'#cddff0'}},
+  foret:{name:'Forêt',tabs:{jour:['#4d8b31','#2d5a1b'],taches:['#7aa63a','#4a6b1f'],todo:['#a07a43','#6b4f2a'],agenda:['#2f855a','#1c5038'],plus:['#8a9a5b','#55613a']},
+    extra:[['#65a30d','#365314'],['#b08d57','#7c5a2e'],['#4f7942','#2c4a26']],
+    dark:{bg:'#0f140c',card:'#182013',card2:'#212b1a',card3:'#2b3822'},light:{bg:'#f1f3ea',card:'#ffffff',card2:'#e7ebdc',card3:'#d6dcc4'}},
+  sunset:{name:'Coucher de soleil',tabs:{jour:['#fb923c','#e11d48'],taches:['#f472b6','#be185d'],todo:['#f59e0b','#c2410c'],agenda:['#a855f7','#6d28d9'],plus:['#fb7185','#9f1239']},
+    extra:[['#fdba74','#ea580c'],['#e879f9','#a21caf'],['#fca5a5','#dc2626']],
+    dark:{bg:'#170d14',card:'#22141d',card2:'#2d1b27',card3:'#3a2332'},light:{bg:'#fdf1ec',card:'#ffffff',card2:'#fbe4dc',card3:'#f5d0c4'}},
+  pastel:{name:'Pastel',tabs:{jour:['#a78bfa','#7c5cd6'],taches:['#f9a8d4','#d9468f'],todo:['#86c5a8','#3f8f6e'],agenda:['#93c5fd','#3b7fd4'],plus:['#fdba74','#e07a2c']},
+    extra:[['#c4b5fd','#8b5cf6'],['#fcd34d','#d97706'],['#a5f3fc','#0e7490']],
+    dark:{bg:'#141320',card:'#1d1b2d',card2:'#26243a',card3:'#312e48'},light:{bg:'#f6f3fb',card:'#ffffff',card2:'#efe9f8',card3:'#e2d9f2'}},
+  nuit:{name:'Nuit étoilée',tabs:{jour:['#6366f1','#312e81'],taches:['#a855f7','#6b21a8'],todo:['#ec4899','#9d174d'],agenda:['#3b82f6','#1e3a8a'],plus:['#14b8a6','#115e59']},
+    extra:[['#8b5cf6','#4c1d95'],['#f472b6','#831843'],['#38bdf8','#0c4a6e']],
+    dark:{bg:'#0a0a18',card:'#131327',card2:'#1b1b35',card3:'#252546'},light:{bg:'#eef0fb',card:'#ffffff',card2:'#e4e6f8',card3:'#d2d6f2'}},
+  terre:{name:'Terre',tabs:{jour:['#c2410c','#7c2d12'],taches:['#d97706','#92400e'],todo:['#65a30d','#3f6212'],agenda:['#b45309','#78350f'],plus:['#a16207','#713f12']},
+    extra:[['#ea580c','#9a3412'],['#ca8a04','#854d0e'],['#84cc16','#4d7c0f']],
+    dark:{bg:'#16100b',card:'#211811',card2:'#2c2118',card3:'#392b20'},light:{bg:'#faf3ea',card:'#ffffff',card2:'#f3e7d8',card3:'#e8d6c0'}},
+};
+const palPairs=P=>[...Object.values(P.tabs),...P.extra];
+const TAB_ICONS={jour:['☀️','🌤️','🏠','🌅','⭐','🧭'],taches:['✅','☑️','✔️','📋','📌','🎯','🏁','⚡','🧩','💪'],todo:['📝','🗒️','📒','💡','📂','🗂️'],agenda:['📅','🗓️','📆','⏰','🕒']};
+const tabIcon=k=>(S.settings.tabIcons&&S.settings.tabIcons[k])||TABS[k][0];
 const LIBT={livre:['📖','Livre'],film:['🎬','Film'],serie:['📺','Série'],bd:['💬','BD']};
 const LOANT={...LIBT,jeu:['🎲','Jeu'],autre:['📦','Autre']};
 function guessType(t){const n=norm(t||'');if(/\b(bd|bande dessinee|manga|comics)\b/.test(n))return 'bd';if(/\b(serie|saison|coffret)\b/.test(n))return 'serie';if(/\b(film|dvd|blu-?ray)\b/.test(n))return 'film';if(/\b(jeu|jeux|puzzle)\b/.test(n))return 'jeu';if(/\b(livre|roman|bouquin|album)\b/.test(n))return 'livre';return 'livre'}
@@ -371,7 +406,7 @@ function defaults(){
   return {tasks:[],events:[],items:[],notes:[],reminders:[],habits:[],ideas:[],loans:[],syncDeletes:[],draft:'',
     folders:[tr,f('Conseil des maîtres',tr.id,3,'🧑‍🏫'),f('Conseil du vendredi',tr.id,5,'🗓️'),f("Conseil d'école",tr.id,1,'🏫'),f('Conseil de cycle',tr.id,4,'🔄'),f('Achat pour la classe',tr.id,6,'🛒'),f('Travaux',null,2,'🔨')],
     settings:{navPos:'bottom',theme:'dark',accent:'nuit',tabOrder:['jour','taches','todo','agenda','notes'],dayStart:'08:00',dayEnd:'20:00',defaultDuration:30,
-      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'brume',bgVeil:45,bgBlur:0,bgVer:0,font:'system',navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
+      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'brume',bgVeil:45,bgBlur:0,bgVer:0,font:'system',palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
 }
 function load(){
   try{const raw=localStorage.getItem(KEY);S=raw?JSON.parse(raw):defaults()}catch(e){S=defaults()}
@@ -459,15 +494,24 @@ function applyTheme(){
   const th=s.theme==='auto'?(matchMedia('(prefers-color-scheme: light)').matches?'light':'dark'):s.theme;
   r.dataset.theme=th;
   const fk=FONTS[s.font]?s.font:'system'; loadFont(fk); r.style.setProperty('--font',FONTS[fk][1]);
-  const a=ACCENTS[s.accent]||ACCENTS.nuit; r.style.setProperty('--a1',a[1]); r.style.setProperty('--a2',a[2]);
+  const P=PALETTES[s.palette];
+  if(P){
+    const [a1,a2]=P.tabs[sub?'plus':view]||P.tabs.jour; r.style.setProperty('--a1',a1); r.style.setProperty('--a2',a2);
+    const t=P[th]; for(const k in t) r.style.setProperty('--'+k,t[k]);
+    GRADS=palPairs(P).map(([x,y])=>`linear-gradient(135deg,${x},${y})`);
+  }else{
+    const a=ACCENTS[s.accent]||ACCENTS.nuit; r.style.setProperty('--a1',a[1]); r.style.setProperty('--a2',a[2]);
+    ['--bg','--card','--card2','--card3'].forEach(k=>r.style.removeProperty(k)); GRADS=GRADS0;
+  }
   document.body.classList.toggle('navtop',s.navPos==='top'); r.style.setProperty('--lift',(+s.navLift||0)+'px');
-  $('meta[name=theme-color]').content=th==='dark'?'#0c0e13':'#eef1f6';
+  $('meta[name=theme-color]').content=P?P[th].bg:(th==='dark'?'#0c0e13':'#eef1f6');
   applyBg();
 }
 function renderNav(){
   const cur=sub?'plus':view;
-  $('#nav').innerHTML=S.settings.tabOrder.map(k=>`<button class="${cur===k?'on':''}" data-a="tab" data-id="${k}"><span class="ic">${TABS[k][0]}</span>${TABS[k][1]}</button>`).join('')
-    +`<button class="${cur==='plus'?'on':''}" data-a="plus"><span class="ic">⋯</span>Plus</button>`;
+  const P=PALETTES[S.settings.palette], st=k=>P&&P.tabs[k]?`style="--ta:${P.tabs[k][0]};--tb:${P.tabs[k][1]}"`:'';
+  $('#nav').innerHTML=S.settings.tabOrder.map(k=>`<button class="${cur===k?'on':''}" ${st(k)} data-a="tab" data-id="${k}"><span class="ic">${tabIcon(k)}</span>${TABS[k][1]}</button>`).join('')
+    +`<button class="${cur==='plus'?'on':''}" ${st('plus')} data-a="plus"><span class="ic">⋯</span>Plus</button>`;
 }
 function render(){
   applyTheme(); renderNav();
@@ -614,7 +658,8 @@ function dayTimeline(t,isToday,sug){
   for(const[a,b]of fr){const sg=sug.find(x=>x.start>=a&&x.start<b);
     h+=`<div class="tl-free" data-a="slotNew" data-v="${fromMin(a)}" style="top:${y(a)+1}px;height:${(b-a)*PX-2}px"><span class="tl-fl">Libre · ${fromMin(a)}–${fromMin(b===1440?1439:b)} · <b>${fmtDur(b-a)}</b></span>${sg&&(b-a)*PX>=44?`<button class="tl-sug" data-a="plan" data-id="${sg.task.id}" data-v="${fromMin(sg.start)}">💡 Caser « ${esc(sg.task.title)} »</button>`:''}</div>`}
   for(const b of B){
-    const c=b.k==='ev'?((S.settings.calendars.find(c=>c.id===b.o.calId)||{}).color||b.o.color||''):'';
+    const PP=PALETTES[S.settings.palette], pc=PP?palPairs(PP)[B.indexOf(b)%palPairs(PP).length]:null;
+    const c=b.k==='ev'?((S.settings.calendars.find(c=>c.id===b.o.calId)||{}).color||b.o.color||(pc?`linear-gradient(135deg,${pc[0]},${pc[1]})`:'')):'';
     const hh=Math.max(20,(b.e-b.s)*PX-2), one=hh<34;
     h+=`<div class="tl-ev ${b.k} ${one?'one':''}" data-a="${b.k==='ev'?'editEvent':'editTask'}" data-id="${b.o.id}" style="top:${y(b.s)}px;height:${hh}px;left:calc(44px + (100% - 48px)*${b.col}/${b.n});width:calc((100% - 48px)/${b.n} - 3px);${b.n>2?'padding:2px 4px;font-size:10.5px;':''}${c?`background:${esc(c)};`:''}"><b>${b.k==='task'?'✅ ':''}${esc(b.o.title)}</b><small>${fromMin(b.s)}–${fromMin(Math.min(b.e,1439))}${b.k==='ev'&&b.o.place?' · 📍 '+esc(b.o.place):''}</small></div>`;
   }
@@ -638,7 +683,7 @@ VIEWS.jour=()=>{
   const hasData=S.tasks.length+S.items.length+S.events.length>5;
   const D=parseD(t), label=isToday?hello+' 👋':jourOff===1?'Demain':cap(JOURS[D.getDay()]);
   const subl=[all.length?`${dn} / ${plural(all.length,'tâche')} accomplie${dn>1?'s':''}`:'',late.length?`${late.length} en retard`:'',evs.length?plural(evs.length,'événement'):'',rems.length?plural(rems.length,'rappel'):''].filter(Boolean).join(' · ')||(isToday?'Rien de prévu : profitez-en':'Rien de prévu ce jour-là');
-  let html=`<div class="hero"><div class="hero-date">${cap(JOURS[D.getDay()])} ${D.getDate()} ${MOIS_A[D.getMonth()]}</div><div class="hero-hello">${label}</div><div class="hero-sub">${subl}</div>${miniStrip(T)}</div>`;
+  let html=`<div class="hero">${isToday?'':`<div class="hero-date">${jourOff===1?'Demain':'Dans '+jourOff+' jours'}</div>`}<div class="hero-day">${cap(JOURS[D.getDay()])} ${D.getDate()} ${MOIS_A[D.getMonth()]}</div><div class="hero-sub">${subl}</div>${miniStrip(T)}</div>`;
   const hol=holidayOn(t); if(hol) html+=`<div style="margin-top:12px">${holiHTML(hol)}</div>`;
   html+=dictCard('jour');
   const nrev=S.notes.filter(n=>n.status==='review').length;
@@ -849,7 +894,8 @@ SUBS.google=()=>{
 SUBS.reglages=()=>{
   const s=S.settings, n=s.tabOrder.length;
   let html=sec('Apparence')+`<div class="card"><div class="fld"><span>Thème</span>${chips([['dark','🌙 Sombre'],['light','☀️ Clair'],['auto','📱 Auto']],s.theme,'setTheme')}</div>
-  <div class="fld"><span>Couleur d'accent : ${ACCENTS[s.accent][0]}</span><div class="swatches">${Object.entries(ACCENTS).map(([k,[l,a,b]])=>`<button class="acc ${s.accent===k?'on':''}" style="background:linear-gradient(135deg,${a},${b})" data-a="setAccent" data-id="${k}" aria-label="${l}"></button>`).join('')}</div></div>
+  <div class="fld"><span>Palette de couleurs</span><div class="pals">${Object.entries(PALETTES).map(([k,P])=>`<button class="pal ${s.palette===k?'on':''}" data-a="setPalette" data-id="${k}" style="background:${P[document.documentElement.dataset.theme||'dark'].card2}"><span class="pdots">${Object.values(P.tabs).map(([a,b])=>`<i style="background:linear-gradient(135deg,${a},${b})"></i>`).join('')}</span><b>${P.name}</b></button>`).join('')}<button class="pal ${!PALETTES[s.palette]?'on':''}" data-a="setPalette" data-id="" style="background:var(--card2)"><span class="pdots"><i style="background:linear-gradient(135deg,var(--a1),var(--a2))"></i></span><b>Couleur unique</b></button></div></div>
+  ${PALETTES[s.palette]?'':`<div class="fld"><span>Couleur d'accent : ${ACCENTS[s.accent][0]}</span>`}<div class="swatches" ${PALETTES[s.palette]?'style="display:none"':''}>${Object.entries(ACCENTS).map(([k,[l,a,b]])=>`<button class="acc ${s.accent===k?'on':''}" style="background:linear-gradient(135deg,${a},${b})" data-a="setAccent" data-id="${k}" aria-label="${l}"></button>`).join('')}</div>${PALETTES[s.palette]?'':'</div>'}
   <div class="fld"><span>Barre de navigation</span>${chips([['bottom','⬇️ En bas'],['top','⬆️ En haut']],s.navPos,'setNav')}</div>
   <div class="range"><span class="small">Hauteur de la barre</span><input type="range" min="0" max="60" step="2" value="${+s.navLift||0}" data-r="navLift" aria-label="Hauteur"><b>${+s.navLift||0} px</b></div>
   <div class="small muted" style="margin-top:4px">Remontez la barre si les boutons de votre téléphone la cachent.</div></div>`;
@@ -858,7 +904,7 @@ SUBS.reglages=()=>{
   <div class="range"><span class="small">Voile</span><input type="range" min="0" max="85" step="5" value="${s.bgVeil}" data-r="bgVeil" aria-label="Voile"><b>${s.bgVeil} %</b></div>
   <div class="range"><span class="small">Flou&nbsp;</span><input type="range" min="0" max="16" step="1" value="${s.bgBlur}" data-r="bgBlur" aria-label="Flou"><b>${s.bgBlur} px</b></div>
   <div class="small muted" style="margin-top:8px">Le voile atténue l'image pour garder les textes lisibles.</div></div>`;
-  html+=sec('Ordre des onglets')+`<div class="card">${s.tabOrder.map((k,i)=>`<div class="srow"><span class="grow">${TABS[k][0]} ${TABS[k][1]}${i===0?' <span class="small muted">· écran d\'ouverture</span>':''}</span><button class="icon-btn sm" data-a="tabMove" data-id="${i}" data-v="-1" ${i===0?'disabled':''}>↑</button><button class="icon-btn sm" data-a="tabMove" data-id="${i}" data-v="1" ${i===n-1?'disabled':''}>↓</button></div>`).join('')}</div>`;
+  html+=sec('Ordre des onglets')+`<div class="card">${s.tabOrder.map((k,i)=>`<div class="srow"><button class="icon-btn sm" data-a="tabIconPick" data-id="${k}" aria-label="Changer l'icône">${tabIcon(k)}</button><span class="grow">${TABS[k][1]}${i===0?' <span class="small muted">· écran d\'ouverture</span>':''}</span><button class="icon-btn sm" data-a="tabMove" data-id="${i}" data-v="-1" ${i===0?'disabled':''}>↑</button><button class="icon-btn sm" data-a="tabMove" data-id="${i}" data-v="1" ${i===n-1?'disabled':''}>↓</button></div>`).join('')}</div>`;
   html+=sec('Organisation de la journée')+`<div class="card"><label class="fld"><span>Vacances scolaires affichées dans l'agenda</span><select data-c="setting" data-f="zone">${[['','Ne pas afficher'],['Zone A','Zone A'],['Zone B','Zone B'],['Zone C','Zone C'],['Corse','Corse']].map(([v,l])=>`<option value="${v}" ${s.zone===v?'selected':''}>${l}</option>`).join('')}</select></label><div class="row2"><label class="fld"><span>Début de journée</span><input type="time" data-c="setting" data-f="dayStart" value="${s.dayStart}"></label><label class="fld"><span>Fin de journée</span><input type="time" data-c="setting" data-f="dayEnd" value="${s.dayEnd}"></label></div><label class="fld"><span>Durée par défaut d'une tâche</span><select data-c="setting" data-f="defaultDuration">${[15,30,45,60,90,120].map(v=>`<option value="${v}" ${+s.defaultDuration===v?'selected':''}>${fmtDur(v)}</option>`).join('')}</select></label></div>`;
   html+=sec('Synchronisation & notifications')+`<div class="card"><button class="srow" style="width:100%;background:none;border:0;text-align:left;padding:10px 0" data-a="goSub" data-id="google"><span class="grow">🔗 Google Agenda</span><span class="muted">${s.clientId?(tokValid()?'Connecté':'Configuré'):'À configurer'} →</span></button><div class="srow"><span class="grow">🔔 Notifications des rappels<div class="small muted">Affichées quand l'app est ouverte ou en arrière-plan récent</div></span>${'Notification' in window?(s.notif&&Notification.permission==='granted'?'<span class="tag ok">Activées</span>':'<button class="btn sm primary" data-a="notifOn">Activer</button>'):'<span class="small muted">Non disponible</span>'}</div></div>`;
   html+=sec('Sauvegarde')+`<div class="card"><div class="small muted">Vos données restent sur ce téléphone. Exportez-les régulièrement (fichier .json avec images) pour ne rien perdre.${s.lastBackup?' Dernier export : '+fmtDate(iso(new Date(s.lastBackup)))+'.':''}</div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary" data-a="export">💾 Exporter</button><button class="btn ghost" data-a="import">📂 Importer</button></div><div class="small muted" id="usage" style="margin-top:10px"></div></div>`;
@@ -1742,6 +1788,9 @@ const A={
   setBg(id){ S.settings.bg=id; save(); render(); },
   pickBg(){ $('#fileBg').click(); },
   setTheme(id){ S.settings.theme=id; save(); render(); },
+  setPalette(id){ S.settings.palette=id; save(); render(); toast(id?'🎨 Palette « '+PALETTES[id].name+' »':'🎨 Couleur unique'); },
+  tabIconPick(k){ openSheet('Icône de l\'onglet '+TABS[k][1],`<div class="iconpick">${(TAB_ICONS[k]||[]).map(ic=>`<button type="button" class="${tabIcon(k)===ic?'on':''}" data-a="setTabIcon" data-id="${k}|${ic}">${ic}</button>`).join('')}</div>`); },
+  setTabIcon(v){ const[k,ic]=v.split('|'); S.settings.tabIcons={...(S.settings.tabIcons||{}),[k]:ic}; save(); closeSheet(); render(); },
   setAccent(id){ S.settings.accent=id; save(); render(); },
   setNav(id){ S.settings.navPos=id; save(); render(); },
   tabMove(id,el){ const i=+id, j=i+(+el.dataset.v), o=S.settings.tabOrder; if(j<0||j>=o.length) return; [o[i],o[j]]=[o[j],o[i]]; save(); render(); },
