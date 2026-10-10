@@ -384,7 +384,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.7.0';
+const VERSION='3.7.1';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -817,7 +817,7 @@ VIEWS.taches=()=>{
   if(taskFilter==='done') L=L.filter(x=>x.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   if(taskFilter==='fri'){ L=L.filter(x=>x.date===fri).sort((a,b)=>a.done-b.done||byTime(a,b)||PRIO[a.priority]-PRIO[b.priority]);
     html+=sec('📅 '+fmtLong(fri),L.length||null)+(L.length?`<div class="list">${L.map(taskRow).join('')}</div>`:empty('','Rien de prévu vendredi',`<div><button class="btn sm primary" data-a="newTaskFri" style="margin-top:8px">+ Tâche pour vendredi</button></div>`,1));
-    return {title:'Tâches',html,fab:'newTaskFri',mic:'task'}; }
+    return {title:'Tâches',html,fab:'newTaskFriQ',mic:'task'}; }
   if(!L.length) html+=empty('✅','Rien ici','Ajoutez une tâche avec le bouton +, ou dictez avec Thêta écoute.');
   else if(taskFilter==='done') html+=`<div class="list">${L.map(taskRow).join('')}</div>`;
   else{
@@ -827,7 +827,7 @@ VIEWS.taches=()=>{
     const used=new Set();
     for(const[name,fn]of G){ const g=L.filter(x=>!used.has(x)&&fn(x)).sort(sorter); g.forEach(x=>used.add(x)); if(g.length) html+=sec(name,g.length)+`<div class="list">${g.map(taskRow).join('')}</div>`; }
   }
-  return {title:'Tâches',html,fab:'newTask',mic:'task'};
+  return {title:'Tâches',html,fab:'newTaskQ',mic:'task'};
 };
 
 /* ---------- Todo ---------- */
@@ -858,7 +858,7 @@ VIEWS.todo=()=>{
   if(open.length) html+=`<div class="list" id="itemsList">${open.map(itemRow).join('')}</div>`;
   if(done.length) html+=`<details class="donebox"><summary>${plural(done.length,'élément terminé','éléments terminés')}</summary><div class="list">${done.map(itemRow).join('')}</div><button class="btn sm ghost danger block" data-a="clearDone">Effacer les terminés</button></details>`;
   if(subs.length||open.length) html+=`<p class="small muted" style="text-align:center;margin-top:16px">Astuce : appui long sur un dossier, ou ⠿ sur un élément, pour réorganiser.</p>`;
-  return {title:cur?path[path.length-1].name:'Notes',html,fab:'newItem',mic:'item',
+  return {title:cur?path[path.length-1].name:'Notes',html,fab:'newItemQ',mic:'item',
     actions:`<button class="icon-btn" data-a="newFolder" aria-label="Nouveau dossier">📁+</button>${cur?'<button class="icon-btn" data-a="editFolder" aria-label="Options du dossier">⋯</button>':''}`,
     after(){
       sortable($('#tiles'),'.tile',ids=>{reorder(S.folders,ids);save()});
@@ -1093,6 +1093,7 @@ const fld=(label,inner)=>`<label class="fld"><span>${label}</span>${inner}</labe
 const inp=(name,val='',type='text',extra='')=>`<input name="${name}" type="${type}" value="${esc(val)}" ${extra}>`;
 const selF=(name,opts,val)=>`<select name="${name}">${opts.map(([v,l])=>`<option value="${esc(v)}" ${String(v)===String(val)?'selected':''}>${esc(l)}</option>`).join('')}</select>`;
 const seg=(name,opts,val)=>`<div class="seg">${opts.map(([v,l])=>`<label><input type="radio" name="${name}" value="${v}" ${v===val?'checked':''}><span>${l}</span></label>`).join('')}</div>`;
+let sheetQuiet=false;
 function openSheet(title,body,opt={}){
   const sh=$('#sheet');
   sh.innerHTML=`<div class="grab"></div><div class="sh-head"><h2>${esc(title)}</h2><button type="button" class="icon-btn sm" data-a="closeSheet" aria-label="Fermer">✕</button></div><form id="shForm" autocomplete="off">${body}${opt.onSave||opt.onDelete?`<div class="sh-foot">${opt.onDelete?'<button type="button" class="btn ghost danger" data-a="sheetDelete">Supprimer</button>':''}${opt.onSave?`<button class="btn primary">${opt.saveLabel||'Enregistrer'}</button>`:''}</div>`:''}</form>`;
@@ -1101,7 +1102,7 @@ function openSheet(title,body,opt={}){
   const w=$('#sheetWrap'); w.classList.remove('hidden'); requestAnimationFrame(()=>requestAnimationFrame(()=>w.classList.add('open')));
   if(!sheetOpen) history.pushState({sheet:1},'');
   sheetOpen=true;
-  const af=sh.querySelector('[autofocus]'); if(af) setTimeout(()=>af.focus(),260);
+  const af=sh.querySelector('[autofocus]'); if(af&&!sheetQuiet) setTimeout(()=>af.focus(),260); sheetQuiet=false;
 }
 function hideSheet(){sheetOpen=false;const w=$('#sheetWrap');w.classList.remove('open');setTimeout(()=>{if(!sheetOpen)w.classList.add('hidden')},230)}
 function closeSheet(){if(!sheetOpen)return;hideSheet();if(history.state&&history.state.sheet){ignorePop=true;history.back()}}
@@ -1865,6 +1866,9 @@ const A={
   sync(){ sync(true); },
   // Tâches
   newTask(){ taskSheet(null); },
+  newTaskQ(){ sheetQuiet=true; taskSheet(null); },
+  newTaskFriQ(){ sheetQuiet=true; taskSheet(null,{date:nextFriday()}); },
+  newItemQ(){ sheetQuiet=true; itemSheet(null); },
   newTaskFri(){ taskSheet(null,{date:nextFriday()}); },
   editTask(id){ const x=S.tasks.find(x=>x.id===id); if(x) taskSheet(x); },
   toggleTask(id){
