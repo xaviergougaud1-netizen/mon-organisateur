@@ -402,7 +402,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.7.3';
+const VERSION='3.7.4';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -1251,7 +1251,7 @@ function ideaSheet(x){
     `<div class="bookfind"><button type="button" class="btn sm ghost" data-a="bookSearch">🔎 Chercher ce titre</button>${'BarcodeDetector' in window?`<button type="button" class="btn sm ghost" data-a="scanIsbn">📷 Code-barres</button>`:''}</div>`+
     fld('Ou des idées par genre',`<div class="genres">${GENRES.map(([l,q])=>`<button type="button" class="chip" data-a="bookGenre" data-id="${esc(q)}">${l}</button>`).join('')}</div>`)+
     `<div id="bookRes" class="bookres"></div>`+
-    fld('Conseillé par / auteur / note',inp('note',v.note))+fld('Photo (couverture…)',imgBoxHTML()),
+    fld('Conseillé par / auteur / note',inp('note',v.note))+fld('Photo (couverture…)',imgBoxHTML(isNew?'title':'')),
     {onSave(fd){const title=fd.title.trim();if(!title)return false;const o=x||{id:uid(),done:false,created:Date.now()};commitImgs(o);Object.assign(o,{type:fd.type,title,note:fd.note.trim()});if(isNew)S.ideas.push(o);save();render()},
      onDelete:isNew?null:()=>{closeSheet();removeUndo('ideas',x,'Idée')}});
   refreshImgBox();
@@ -1263,7 +1263,7 @@ function loanSheet(l){
   openSheet(isNew?'Nouveau prêt':'Modifier le prêt',
     fld('Type',seg('type',Object.entries(LOANT).map(([k,[i,lb]])=>[k,i+' '+lb]),v.type||guessType(v.title)))+
     fld('Objet prêté',inp('title',v.title,'text','required autofocus placeholder="Titre du livre, de la BD, du film…"'))+`<div class="bookfind"><button type="button" class="btn sm ghost" data-a="bookSearch">🔎 Chercher ce titre</button></div><div id="bookRes" class="bookres"></div>`+`<div class="row2">${fld('Prêté à',inp('person',v.person,'text','required list="loanPeople"'))}<datalist id="loanPeople">${[...new Set(S.loans.map(x=>x.person).filter(Boolean))].map(n=>`<option value="${esc(n)}">`).join('')}</datalist>${fld('Depuis le',inp('date',v.date,'date'))}</div>`+`<div>${fld('Lieu de remise',inp('place',v.place||'','text','list="loanPlaces" autocomplete="off" placeholder="Ex. Gare de l’Est"'))}<datalist id="loanPlaces">${loanPlaces().map(n=>`<option value="${esc(n)}">`).join('')}</datalist></div>`+
-    fld('Photo de l\'objet',imgBoxHTML())+
+    fld('Photo de l\'objet',imgBoxHTML(isNew?'title':''))+
     (l&&l.returned?`<label class="srow"><span class="grow">Marquer comme non rendu</span><input type="checkbox" class="sw" name="unreturn"></label>`:''),
     {onSave(fd){const title=fd.title.trim(),person=fd.person.trim();if(!title||!person)return false;const o=l||{id:uid(),returned:null};commitImgs(o);Object.assign(o,{title,person,place:(fd.place||'').trim(),type:fd.type||guessType(title),date:fd.date||today()});if(o.place&&!loanPlaces().includes(o.place))S.loanPlaces=[...loanPlaces(),o.place];if(fd.unreturn)o.returned=null;if(isNew)S.loans.push(o);save();render()},
      onDelete:isNew?null:()=>{closeSheet();removeUndo('loans',l,'Prêt')}});
