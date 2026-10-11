@@ -238,6 +238,7 @@ body.vjour #main{touch-action:pan-y}
 .tl-ev.one b{display:block;white-space:nowrap;text-overflow:ellipsis}.tl-ev small{display:block;opacity:.88;font-size:10.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tl-ev.one{display:flex;align-items:center;gap:5px;padding:0 6px}.tl-ev.one b{flex:0 1 auto;min-width:0}.tl-ev.one small{flex:1 1 0;min-width:0}
 .tl-ev.task{background:var(--card);color:var(--text);border:1.5px solid var(--a1)}
+.tl-ev.cls,.wk-ev.cls{background:repeating-linear-gradient(135deg,color-mix(in srgb,var(--text) 10%,transparent) 0 6px,color-mix(in srgb,var(--text) 5%,transparent) 6px 12px);color:var(--text);box-shadow:none;cursor:default;z-index:1;opacity:.85}
 .agnav{display:flex;align-items:center;gap:8px;margin-bottom:10px}
 .agnav .agtitle{flex:1;text-align:center;font-size:15px;line-height:1.2}
 .agw-head{display:flex;align-items:center;justify-content:space-between;margin:14px 0 6px;padding:8px 12px;border-radius:12px;background:var(--card2);font-weight:700;font-size:14px;cursor:pointer}
@@ -245,6 +246,9 @@ body.vjour #main{touch-action:pan-y}
 .agw-head span{opacity:.6}
 .agw-empty{padding:0 12px 4px}
 .agcard{padding:10px;margin-bottom:8px}
+.crit{background:color-mix(in srgb,var(--a1) 8%,transparent);border-radius:14px;padding:4px 10px 8px;margin-bottom:8px}
+.crit-hint{margin:-2px 2px 6px}
+.crit .seg label{min-width:18%}
 .agday-h{display:flex;justify-content:space-between;align-items:center;padding:10px 6px 6px;font-size:13px;font-weight:750;opacity:.9}
 .agday-h span{font-size:12px;opacity:.6;font-weight:650}
 .agday-h:not(:first-child){margin-top:6px;border-top:1px solid var(--card3);padding-top:12px}
@@ -413,7 +417,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.8.1';
+const VERSION='3.9.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -499,6 +503,7 @@ function defaults(){
   return {tasks:[],events:[],items:[],notes:[],reminders:[],habits:[],ideas:[],loans:[],syncDeletes:[],draft:'',
     folders:[tr,f('Conseil des maîtres',tr.id,3,'🧑‍🏫'),f('Conseil du vendredi',tr.id,5,'🗓️'),f("Conseil d'école",tr.id,1,'🏫'),f('Conseil de cycle',tr.id,4,'🔄'),f('Achat pour la classe',tr.id,6,'🛒'),f('Travaux',null,2,'🔨')],
     settings:{navPos:'bottom',theme:'dark',accent:'nuit',tabOrder:['jour','taches','todo','agenda','notes'],dayStart:'08:00',dayEnd:'20:00',defaultDuration:30,
+      classDays:[1,2,4],classStart:'09:00',classEnd:'16:45',directionDays:[5],dechargeKw:'décharge',
       clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'shape',bgShape:'montagnes',bgColor:'auto',bgBright:100,bgVeil:45,bgBlur:0,bgVer:0,font:'system',homeAdd:false,homePhoto:false,homeKeyboard:false,palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
 }
 function load(){
@@ -612,7 +617,7 @@ async function applyBg(){
 }
 
 /* ================= État d'interface ================= */
-let view='jour', sub=null, todoFolder=null, taskFilter='todo', libTab='ideas', libFilter='all', loanGroup='person', iconEdit=null, fontOpen=false, agendaPast=false, showLoansDone=false;
+let taskCat='all', view='jour', sub=null, todoFolder=null, taskFilter='todo', libTab='ideas', libFilter='all', loanGroup='person', iconEdit=null, fontOpen=false, agendaPast=false, showLoansDone=false;
 
 /* ================= Rendu ================= */
 const VIEWS={}, SUBS={};
@@ -711,6 +716,34 @@ const fmtMonth=m=>{if(!m)return '';const[y,mo]=m.split('-').map(Number);return c
 const remDone=(r,d)=>r.recur&&r.recur!=='none'?r.lastDone===d:!!r.done;
 const remindersOn=d=>S.reminders.filter(r=>remOccurs(r,d)).sort(byTime);
 const PRIO={haute:0,moyenne:1,basse:2};
+const URG={tres:['🔥','Très urgent'],urgent:['⚡','Urgent'],non:['🌿','Pas urgent']};
+const DURB=[[5,'< 5 min'],[15,'5–15 min'],[30,'15–30 min'],[60,'30 min–1 h'],[90,'> 1 h']];
+const durBucket=m=>{m=+m||30;return m<=5?5:m<=15?15:m<=30?30:m<=60?60:90};
+const isWork=x=>x&&x.cat==='travail';
+// Score de priorité : plus il est petit, plus la tâche passe tôt
+function taskScore(x){
+  if(!isWork(x)) return {haute:25,moyenne:45,basse:55}[x.priority||'moyenne']??45;
+  const u={tres:0,urgent:20,non:40}[x.urg||'non'], i=x.imp?0:10, q=(+x.duration||30)<=5?-3:0;
+  return u+i+q;
+}
+const byScore=(a,b)=>taskScore(a)-taskScore(b)||(a.date||a.month||'9999').localeCompare(b.date||b.month||'9999')||byTime(a,b);
+// Emploi du temps de l'école
+const hasDecharge=d=>{const k=norm(S.settings.dechargeKw||'');return !!k&&eventsOn(d).some(e=>norm(e.title||'').includes(k))};
+function classBlock(d){
+  const st=S.settings, wd=parseD(d).getDay();
+  if(!(st.classDays||[]).includes(wd)||holidayOn(d)||hasDecharge(d)) return null;
+  return [toMin(st.classStart||'09:00'),toMin(st.classEnd||'16:45')];
+}
+const schoolDay=d=>{const wd=parseD(d).getDay(),st=S.settings;return !holidayOn(d)&&((st.classDays||[]).includes(wd)||(st.directionDays||[]).includes(wd))};
+const classB=(d,k)=>{const c=classBlock(d);return c?[{s:c[0],e:c[1],k,o:{id:''}}]:[]};
+// Tâches à faire un jour donné : datées ce jour + (aujourd'hui) très urgentes sans date + (mercredi/vendredi) urgentes sans date
+function dueOn(x,d){
+  if(x.done) return false;
+  if(x.date===d) return true;
+  if(x.date||x.month||!isWork(x)||d!==today()) return false;
+  const wd=parseD(d).getDay();
+  return x.urg==='tres'||(x.urg==='urgent'&&(wd===3||wd===5));
+}
 const RECUR_L={day:'chaque jour',weekdays:'lun → ven',week:'chaque semaine',biweek:'toutes les 2 semaines',month:'chaque mois',lastwork:'dernier jour ouvré',year:'chaque année'};
 function nextRecur(d,r){
   const step=x=>{if(r==='day')return addDays(x,1);if(r==='week')return addDays(x,7);if(r==='biweek')return addDays(x,14);
@@ -719,20 +752,43 @@ function nextRecur(d,r){
     let n=addDays(x,1);while([0,6].includes(parseD(n).getDay()))n=addDays(n,1);return n};
   let n=step(d); let g=0; while(n<today()&&g++<400) n=step(n); return n;
 }
-function suggest(){
-  const t=today(), now=new Date(), end=toMin(S.settings.dayEnd);
-  const start=Math.max(toMin(S.settings.dayStart),Math.ceil((now.getHours()*60+now.getMinutes())/15)*15);
-  if(start>=end) return [];
-  const busy=[...eventsOn(t).filter(e=>e.start&&e.date===t).map(e=>[toMin(e.start),e.end&&e.end>e.start?toMin(e.end):toMin(e.start)+60]),
-    ...S.tasks.filter(x=>x.date===t&&x.time&&!x.done).map(x=>[toMin(x.time),toMin(x.time)+(+x.duration||30)])].sort((a,b)=>a[0]-b[0]);
+// Propose un horaire pour les tâches sans heure, dans les créneaux libres du jour d
+function suggest(d){
+  const t=today(); d=d||t; if(d<t) return [];
+  const st=S.settings, wd=parseD(d).getDay(), endD=toMin(st.dayEnd||'20:00');
+  let start=toMin(st.dayStart||'08:00');
+  if(d===t){const n=new Date();start=Math.max(start,Math.ceil((n.getHours()*60+n.getMinutes())/15)*15)}
+  if(start>=endD) return [];
+  const busy=[...eventsOn(d).filter(e=>e.start&&e.date===d).map(e=>[toMin(e.start),e.end&&e.end>e.start?toMin(e.end):toMin(e.start)+60]),
+    ...S.tasks.filter(x=>x.date===d&&x.time&&!x.done).map(x=>[toMin(x.time),toMin(x.time)+(+x.duration||30)]),
+    ...classB(d,'c').map(b=>[b.s,b.e])].sort((a,b)=>a[0]-b[0]);
   const free=[]; let cur=start;
-  for(const[a,b]of busy){ if(a>cur) free.push([cur,Math.min(a,end)]); cur=Math.max(cur,b); if(cur>=end) break; }
-  if(cur<end) free.push([cur,end]);
-  const cand=S.tasks.filter(x=>!x.done&&!x.time&&(!x.date||x.date<=t)).sort((a,b)=>PRIO[a.priority]-PRIO[b.priority]||(a.date||'9999').localeCompare(b.date||'9999'));
+  for(const[a,b]of busy){ if(a>cur) free.push([cur,Math.min(a,endD)]); cur=Math.max(cur,b); if(cur>=endD) break; }
+  if(cur<endD) free.push([cur,endD]);
+  // Jour d'école (classe ou direction) : les heures d'école vont au travail, le perso passe en dehors
+  const sch=schoolDay(d)?[toMin(st.classStart||'09:00'),toMin(st.classEnd||'16:45')]:null;
+  const segs=sch?free.flatMap(([a,b])=>{const c=[a,...sch.filter(v=>v>a&&v<b),b],r=[];for(let i=0;i<c.length-1;i++)r.push([c[i],c[i+1]]);return r}):free;
+  const inSch=sl=>!!sch&&sl[0]>=sch[0]&&sl[1]<=sch[1];
+  const wedFri=wd===3||wd===5, mk=d.slice(0,7);
+  const ok=x=>{
+    if(x.done||x.time) return false;
+    if(x.date&&x.date>d) return false;
+    if(x.month&&x.month>mk) return false;
+    if(x.date) return true;                      // prévue ce jour-là ou en retard
+    if(!isWork(x)) return true;
+    if(x.urg==='tres') return d===t;             // très urgent : dans la journée
+    if(x.urg==='urgent') return wedFri;          // urgent : mercredi ou vendredi
+    return true;                                  // pas urgent : dès qu'un créneau se libère
+  };
   const out=[];
-  for(const c of cand){ const dur=+c.duration||30; const slot=free.find(([a,b])=>b-a>=dur); if(!slot) continue;
-    out.push({task:c,start:slot[0],end:slot[0]+dur}); slot[0]+=dur; if(out.length>=5) break; }
-  return out;
+  for(const c of S.tasks.filter(ok).sort(byScore)){
+    const dur=Math.max(5,+c.duration||30), fits=sl=>sl[1]-sl[0]>=dur;
+    const slot=isWork(c)?(segs.find(sl=>fits(sl)&&inSch(sl))||segs.find(fits)):segs.find(sl=>fits(sl)&&!inSch(sl));
+    if(!slot) continue;
+    out.push({task:c,start:slot[0],end:slot[0]+dur}); slot[0]+=dur;
+    if(out.length>=8) break;
+  }
+  return out.sort((a,b)=>a.start-b.start);
 }
 let subAddFor=null;
 function subList(o,kind){
@@ -746,7 +802,9 @@ function taskRow(x){
   if(x.date) m.push(`<span class="tag ${late?'late':''}">📅 ${fmtDate(x.date)}</span>`);
   if(x.month) m.push(`<span class="tag ${late?'late':''}">🗓️ ${fmtMonth(x.month)}</span>`);
   if(x.time) m.push(`<span class="tag">🕐 ${x.time}</span>`);
-  if(x.duration) m.push(`<span class="tag">⏱ ${fmtDur(x.duration)}</span>`);
+  if(isWork(x)){ m.push(`<span class="tag ${x.urg==='tres'?'late':''}">${URG[x.urg||'non'][0]} ${URG[x.urg||'non'][1]}</span>`); if(x.imp) m.push('<span class="tag">⭐ Important</span>'); m.push(`<span class="tag">⏱ ${(DURB.find(b=>b[0]===durBucket(x.duration))||[])[1]}</span>`); }
+  else if(x.duration) m.push(`<span class="tag">⏱ ${fmtDur(x.duration)}</span>`);
+  m.unshift(`<span class="tag">${isWork(x)?'💼':'🏠'}</span>`);
   if(x.recur&&x.recur!=='none') m.push(`<span class="tag">🔁 ${RECUR_L[x.recur]||''}</span>`);
   m.push(syncTag(x));
   const th=x.images&&x.images.length?`<img class="tthumb" data-img="${x.images[0]}" data-a="viewImg" data-id="${x.images[0]}" alt="">`:'';
@@ -782,7 +840,7 @@ function dayTimeline(t,isToday,sug){
   const evs=eventsOn(t), allDay=evs.filter(e=>!e.start||e.date!==t), timed=evs.filter(e=>e.start&&e.date===t);
   const tks=S.tasks.filter(x=>x.date===t&&x.time&&!x.done);
   const B=[...timed.map(e=>{const s0=toMin(e.start);const en=e.end&&e.end>e.start?toMin(e.end):(e.endDate&&e.endDate>t?1440:s0+60);return{s:s0,e:Math.max(en,s0+15),k:'ev',o:e}}),
-           ...tks.map(x=>{const s0=toMin(x.time);return{s:s0,e:s0+Math.max(15,+x.duration||30),k:'task',o:x}})].sort((a,b)=>a.s-b.s||b.e-a.e);
+           ...tks.map(x=>{const s0=toMin(x.time);return{s:s0,e:s0+Math.max(15,+x.duration||30),k:'task',o:x}}),...classB(t,'class')].sort((a,b)=>a.s-b.s||b.e-a.e);
   let H0=toMin(S.settings.dayStart||'08:00'), H1=toMin(S.settings.dayEnd||'20:00');
   B.forEach(b=>{H0=Math.min(H0,Math.floor(b.s/60)*60);H1=Math.max(H1,Math.min(1440,Math.ceil(b.e/60)*60))});
   const PX=(view==='jour'&&!sub&&S.settings.homeCompact!==false)?0.5:1, y=m=>(m-H0)*PX;
@@ -797,8 +855,9 @@ function dayTimeline(t,isToday,sug){
   let h='';
   for(let m=H0;m<=H1;m+=60) h+=`<div class="tl-h" style="top:${y(m)}px"><span>${m>=1440?'24':pad(m/60)}h</span></div>`;
   for(const[a,b]of fr){const sg=sug.find(x=>x.start>=a&&x.start<b);
-    h+=`<div class="tl-free" data-a="slotNew" data-d="${t}" data-v="${fromMin(a)}" style="top:${y(a)+1}px;height:${(b-a)*PX-2}px"><span class="tl-fl">Libre · ${fromMin(a)}–${fromMin(b===1440?1439:b)} · <b>${fmtDur(b-a)}</b></span>${sg&&(b-a)*PX>=44?`<button class="tl-sug" data-a="plan" data-id="${sg.task.id}" data-v="${fromMin(sg.start)}">💡 Caser « ${esc(sg.task.title)} »</button>`:''}</div>`}
+    h+=`<div class="tl-free" data-a="slotNew" data-d="${t}" data-v="${fromMin(a)}" style="top:${y(a)+1}px;height:${(b-a)*PX-2}px"><span class="tl-fl">Libre · ${fromMin(a)}–${fromMin(b===1440?1439:b)} · <b>${fmtDur(b-a)}</b></span>${sg&&(b-a)*PX>=44?`<button class="tl-sug" data-a="plan" data-d="${t}" data-id="${sg.task.id}" data-v="${fromMin(sg.start)}">💡 Caser « ${esc(sg.task.title)} »</button>`:''}</div>`}
   for(const b of B){
+    if(b.k==='class'){h+=`<div class="tl-ev cls" style="top:${y(b.s)}px;height:${Math.max(20,(b.e-b.s)*PX-2)}px;left:calc(44px + (100% - 48px)*${b.col}/${b.n});width:calc((100% - 48px)/${b.n} - 3px)"><b>🏫 En classe</b><small>${fromMin(b.s)}–${fromMin(b.e)}</small></div>`;continue}
     const PP=PALETTES[S.settings.palette], pc=PP?palPairs(PP)[B.indexOf(b)%palPairs(PP).length]:null;
     const c=b.k==='ev'?((S.settings.calendars.find(c=>c.id===b.o.calId)||{}).color||b.o.color||(pc?`linear-gradient(135deg,${pc[0]},${pc[1]})`:'')):'';
     const hh=Math.max(20,(b.e-b.s)*PX-2), one=hh<34;
@@ -810,13 +869,13 @@ function dayTimeline(t,isToday,sug){
 VIEWS.jour=()=>{
   const T=today(), t=addDays(T,jourOff), isToday=jourOff===0, now=new Date(), h=now.getHours(), tm=t.slice(0,7);
   const hello=h<5?'Bonne nuit':h<12?'Bonjour':h<18?'Bon après-midi':'Bonsoir';
-  const all=S.tasks.filter(x=>x.date===t);
-  const open=all.filter(x=>!x.done).sort((a,b)=>byTime(a,b)||PRIO[a.priority]-PRIO[b.priority]);
+  const all=S.tasks.filter(x=>x.date===t||dueOn(x,t));
+  const open=all.filter(x=>!x.done).sort(byScore);
   const dn=all.length-open.length, pct=all.length?Math.round(dn/all.length*100):0;
   const late=isToday?S.tasks.filter(x=>!x.done&&((x.date&&x.date<t)||(x.month&&x.month<tm))).sort((a,b)=>(a.date||a.month).localeCompare(b.date||b.month)):[];
   const lateR=isToday?S.reminders.filter(r=>r.recur==='none'&&!r.done&&r.date<t):[];
   const monthT=S.tasks.filter(x=>!x.done&&x.month===tm).sort((a,b)=>PRIO[a.priority]-PRIO[b.priority]);
-  const evs=eventsOn(t), remsAll=remindersOn(t), rems=remsAll.filter(r=>!remDone(r,t)), sug=isToday?suggest():[];
+  const evs=eventsOn(t), remsAll=remindersOn(t), rems=remsAll.filter(r=>!remDone(r,t)), sug=suggest(t);
   const accT=[...new Set([...all.filter(x=>x.done),...(isToday?S.tasks.filter(x=>doneOn(x,t)):[])])];
   const accR=[...new Set([...remsAll.filter(r=>remDone(r,t)),...(isToday?S.reminders.filter(r=>r.recur==='none'&&doneOn(r,t)):[])])];
   const accI=isToday?S.items.filter(x=>doneOn(x,t)):[];
@@ -832,7 +891,7 @@ VIEWS.jour=()=>{
   if(open.length) html+=sec(isToday?'Tâches du jour':'Tâches',open.length)+taskCard(open);
   if(late.length||lateR.length) html+=sec('En retard',late.length+lateR.length)+`<div class="card agcard"><div class="list">${late.map(taskRowLite).join('')}${lateR.map(remRow).join('')}</div></div>`;
   html+=sec('Ma journée')+dayTimeline(t,isToday,sug);
-  if(sug.length>1) html+=`<button class="btn sm primary block" data-a="planAll" style="margin-top:0">✨ Caser automatiquement ${plural(sug.length,'tâche')}</button>`;
+  if(sug.length>1) html+=`<button class="btn sm primary block" data-a="planAll" data-d="${t}" style="margin-top:0">✨ Caser automatiquement ${plural(sug.length,'tâche')}</button>`;
   if(rems.length) html+=sec('Rappels',rems.length)+`<div class="list">${rems.map(r=>remRow(r,t)).join('')}</div>`;
   if(monthT.length) html+=sec('🗓️ Ce mois-ci · '+fmtMonth(tm),monthT.length)+taskCard(monthT);
   if(isToday&&S.habits.length) html+=sec('Habitudes')+`<div class="hchips">${S.habits.map(hb=>`<button class="chip ${hb.log[t]?'on':''}" data-a="habitDay" data-id="${hb.id}" data-v="${t}">${esc(hb.emoji||'⭐')} ${esc(hb.name)}</button>`).join('')}</div>`;
@@ -844,10 +903,11 @@ VIEWS.jour=()=>{
 VIEWS.taches=()=>{
   const t=today(), cm=curMonth();
   const fri=nextFriday();
-  let html=chips([['todo','À faire'],['today','Aujourd\'hui'],['fri','Ven. '+parseD(fri).getDate()],['done','Faites'],['all','Toutes']],taskFilter,'taskFilter',true);
-  let L=S.tasks.slice();
+  let html=chips([['todo','À faire'],['today','Aujourd\'hui'],['fri','Ven. '+parseD(fri).getDate()],['done','Faites'],['all','Toutes']],taskFilter,'taskFilter',true)
+    +chips([['all','Tout'],['travail','💼 Travail'],['perso','🏠 Perso']],taskCat,'taskCat',true);
+  let L=S.tasks.filter(x=>taskCat==='all'||(taskCat==='travail')===isWork(x));
   if(taskFilter==='todo') L=L.filter(x=>!x.done);
-  if(taskFilter==='today') L=L.filter(x=>x.date===t||(!x.done&&((x.date&&x.date<t)||(x.month&&x.month<=cm))));
+  if(taskFilter==='today') L=L.filter(x=>x.date===t||dueOn(x,t)||(!x.done&&((x.date&&x.date<t)||(x.month&&x.month<=cm))));
   if(taskFilter==='done') L=L.filter(x=>x.done).sort((a,b)=>(b.doneAt||0)-(a.doneAt||0));
   if(taskFilter==='fri'){ L=L.filter(x=>x.date===fri).sort((a,b)=>a.done-b.done||byTime(a,b)||PRIO[a.priority]-PRIO[b.priority]);
     html+=sec('📅 '+fmtLong(fri),L.length||null)+(L.length?`<div class="list">${L.map(taskRow).join('')}</div>`:empty('','Rien de prévu vendredi',`<div><button class="btn sm primary" data-a="newTaskFri" style="margin-top:8px">+ Tâche pour vendredi</button></div>`,1));
@@ -855,8 +915,8 @@ VIEWS.taches=()=>{
   if(!L.length) html+=empty('✅','Rien ici','Ajoutez une tâche avec le bouton +, ou dictez avec Thêta écoute.');
   else if(taskFilter==='done') html+=`<div class="list">${L.map(taskRow).join('')}</div>`;
   else{
-    const sorter=(a,b)=>a.done-b.done||(a.date||a.month||'').localeCompare(b.date||b.month||'')||byTime(a,b)||PRIO[a.priority]-PRIO[b.priority];
-    const G=[['En retard',x=>!x.done&&((x.date&&x.date<t)||(x.month&&x.month<cm))],['Aujourd\'hui',x=>x.date===t],['Demain',x=>x.date===addDays(t,1)],['Cette semaine',x=>x.date>addDays(t,1)&&x.date<=addDays(t,7)],['Plus tard',x=>x.date>addDays(t,7)],
+    const sorter=(a,b)=>a.done-b.done||taskScore(a)-taskScore(b)||(a.date||a.month||'').localeCompare(b.date||b.month||'')||byTime(a,b);
+    const G=[['En retard',x=>!x.done&&((x.date&&x.date<t)||(x.month&&x.month<cm))],['Aujourd\'hui',x=>x.date===t||dueOn(x,t)],['Demain',x=>x.date===addDays(t,1)],['Cette semaine',x=>x.date>addDays(t,1)&&x.date<=addDays(t,7)],['Plus tard',x=>x.date>addDays(t,7)],
       ['🗓️ Ce mois-ci · '+fmtMonth(cm),x=>x.month===cm],['🗓️ Mois à venir',x=>x.month&&x.month>cm],['Sans date',x=>!x.date&&!x.month],['Passées',x=>x.done&&((x.date&&x.date<t)||(x.month&&x.month<cm))]];
     const used=new Set();
     for(const[name,fn]of G){ const g=L.filter(x=>!used.has(x)&&fn(x)).sort(sorter); g.forEach(x=>used.add(x)); if(g.length) html+=sec(name,g.length)+`<div class="list">${g.map(taskRow).join('')}</div>`; }
@@ -907,14 +967,14 @@ let agMode='liste', agDay=null;
 const agCur=()=>agDay||today();
 const agendaModeChips=()=>chips([['liste','Liste'],['jour','Jour'],['semaine','Semaine'],['mois','Mois']],agMode,'agendaMode',true);
 const agendaNav=label=>`<div class="agnav"><button class="icon-btn" data-a="agendaStep" data-id="-1" aria-label="Précédent">‹</button><button class="chip" data-a="agendaToday">Aujourd'hui</button><b class="agtitle">${label}</b><button class="icon-btn" data-a="agendaStep" data-id="1" aria-label="Suivant">›</button></div>`;
-const agTasksOn=d=>S.tasks.filter(x=>x.date===d&&!x.done).sort(byTime);
+const agTasksOn=d=>S.tasks.filter(x=>dueOn(x,d)).sort(byScore);
 const agTaskList=d=>{const L=agTasksOn(d);return L.length?taskCard(L):''};
 const agDayLabel=(txt,n)=>`<div class="agday-h">${txt}<span>${n}</span></div>`;
 function agendaDayView(){
   const t=agCur(), hol=holidayOn(t);
   return agendaNav(fmtLong(t)+(t===today()?' · aujourd\'hui':''))
     +sec(fmtLong(t),agTasksOn(t).length||null)+(agTasksOn(t).length?agTaskList(t):'<div class="small muted agw-empty">Aucune tâche ce jour-là</div>')
-    +dayTimeline(t,t===today(),t===today()?suggest():[]);
+    +dayTimeline(t,t===today(),suggest(t));
 }
 function agendaWeekView(){
   const t=agCur(), D=parseD(t), mon=addDays(t,-((D.getDay()+6)%7)), M=parseD(mon), tod=today();
@@ -923,7 +983,7 @@ function agendaWeekView(){
   const cols=days.map(d=>{
     const evs=eventsOn(d);
     const B=[...evs.filter(e=>e.start&&e.date===d).map(e=>{const s0=toMin(e.start);const en=e.end&&e.end>e.start?toMin(e.end):s0+60;return{s:s0,e:Math.max(en,s0+15),k:'e',o:e,c:calCol(e)}}),
-             ...S.tasks.filter(x=>x.date===d&&x.time&&!x.done).map(x=>{const s0=toMin(x.time);return{s:s0,e:s0+Math.max(15,+x.duration||30),k:'t',o:x,c:''}})].sort((a,b)=>a.s-b.s||b.e-a.e);
+             ...S.tasks.filter(x=>x.date===d&&x.time&&!x.done).map(x=>{const s0=toMin(x.time);return{s:s0,e:s0+Math.max(15,+x.duration||30),k:'t',o:x,c:''}}),...classB(d,'c')].sort((a,b)=>a.s-b.s||b.e-a.e);
     const allday=[...evs.filter(e=>!e.start||e.date!==d).map(e=>({k:'e',o:e,c:calCol(e)})),...S.tasks.filter(x=>x.date===d&&!x.time&&!x.done).map(x=>({k:'t',o:x,c:''}))];
     return {d,B,allday};
   });
@@ -941,7 +1001,7 @@ function agendaWeekView(){
     const finish=()=>{const n=Math.max(1,...cluster.map(b=>b.col+1));cluster.forEach(b=>b.n=n);cluster=[];colsEnd.length=0};
     B.forEach(b=>{if(cluster.length&&b.s>=clEnd)finish();let c=colsEnd.findIndex(e=>e<=b.s);if(c<0){c=colsEnd.length;colsEnd.push(b.e)}else colsEnd[c]=b.e;b.col=c;cluster.push(b);clEnd=Math.max(clEnd,b.e)});
     if(cluster.length) finish();
-    const blocks=B.map(b=>`<div class="wk-ev ${b.k==='t'?'task':''}" data-drag="${b.k==='t'?'task':'ev'}" data-mode="t" data-d="${d}" data-s="${b.s}" data-dur="${b.e-b.s}" data-ppm="${PX}" data-a="${b.k==='e'?'editEvent':'editTask'}" data-id="${b.o.id}" style="top:${(b.s-H0)*PX}px;height:${Math.max(18,(b.e-b.s)*PX-2)}px;left:calc(${b.col*100/b.n}% + 1px);width:calc(${100/b.n}% - 2px);${b.c?'background:'+esc(b.c):''}"><b>${esc(b.o.title)}</b><small>${fromMin(b.s)}</small></div>`).join('');
+    const blocks=B.map(b=>b.k==='c'?`<div class="wk-ev cls" style="top:${(b.s-H0)*PX}px;height:${(b.e-b.s)*PX-2}px;left:calc(${b.col*100/b.n}% + 1px);width:calc(${100/b.n}% - 2px)"><b>🏫</b><small>Classe</small></div>`:`<div class="wk-ev ${b.k==='t'?'task':''}" data-drag="${b.k==='t'?'task':'ev'}" data-mode="t" data-d="${d}" data-s="${b.s}" data-dur="${b.e-b.s}" data-ppm="${PX}" data-a="${b.k==='e'?'editEvent':'editTask'}" data-id="${b.o.id}" style="top:${(b.s-H0)*PX}px;height:${Math.max(18,(b.e-b.s)*PX-2)}px;left:calc(${b.col*100/b.n}% + 1px);width:calc(${100/b.n}% - 2px);${b.c?'background:'+esc(b.c):''}"><b>${esc(b.o.title)}</b><small>${fromMin(b.s)}</small></div>`).join('');
     body+=`<div class="wk-col" data-tdrop="${d}" data-a="wkSlot" data-d="${d}" data-h0="${H0}" data-ppm="${PX}" style="height:${H}px">${hrs.map(m=>`<i class="wk-hr" style="top:${(m-H0)*PX}px"></i>`).join('')}${blocks}</div>`;
   });
   const groups=days.map(d=>{const L=agTasksOn(d);return L.length?agDayLabel(fmtLong(d),L.length)+`<div class="list">${L.map(taskRowLite).join('')}</div>`:''}).join('');
@@ -1140,6 +1200,8 @@ SUBS.reglages=()=>{
   <div class="srow"><span class="grow">⌨️ Écrire une note</span><input type="checkbox" class="sw" data-c="setting" data-f="homeKeyboard" ${s.homeKeyboard?'checked':''}></div></div>`;
   html+=sec('Onglets et icônes')+`<div class="card"><div class="taborder" id="tabOrder">${s.tabOrder.map((k,i)=>`<div class="tabtile handle" data-id="${k}"><span>${tabIcon(k)}</span><small>${TABS[k][1]}</small>${i===0?'<em>ouverture</em>':''}</div>`).join('')}</div><div class="small muted" style="margin-top:8px">Faites glisser un onglet pour le déplacer. Le premier s'ouvre au démarrage.</div></div>`;
   html+=`<div class="sub-h">Icône de l'application</div>`+`<div class="card"><div class="iconrow">${['jour','taches','todo','agenda'].map(k=>`<button class="icsel ${iconEdit===k?'on':''}" data-a="iconEdit" data-id="${k}"><span>${tabIcon(k)}</span><small>${TABS[k][1]}</small></button>`).join('')}</div>${iconEdit?`<div class="small muted" style="margin:12px 0 2px">Choisissez l'icône de « ${TABS[iconEdit][1]} » :</div><div class="iconpick">${(TAB_ICONS[iconEdit]||[]).map(ic=>`<button type="button" class="${tabIcon(iconEdit)===ic?'on':''}" data-a="setTabIcon" data-id="${iconEdit}|${ic}">${ic}</button>`).join('')}</div>`:'<div class="small muted" style="margin-top:10px">Touchez une icône pour voir les propositions.</div>'}</div>`;
+  const dayChips=(key,pre)=>`<div class="chips">${[[1,'Lun'],[2,'Mar'],[3,'Mer'],[4,'Jeu'],[5,'Ven']].map(([n,l])=>`<button class="chip ${(s[key]||[]).includes(n)?'on':''}" data-a="toggleDay" data-id="${pre}:${n}">${l}</button>`).join('')}</div>`;
+  html+=sec('Emploi du temps de l\'école')+`<div class="card"><div class="fld"><span>🏫 Jours de classe</span>${dayChips('classDays','class')}</div><div class="row2"><label class="fld"><span>Début de la classe</span><input type="time" data-c="setting" data-f="classStart" value="${s.classStart||'09:00'}"></label><label class="fld"><span>Fin de la classe</span><input type="time" data-c="setting" data-f="classEnd" value="${s.classEnd||'16:45'}"></label></div><div class="fld"><span>🧭 Jours de direction</span>${dayChips('directionDays','dir')}</div><label class="fld"><span>Mot repéré dans l'agenda pour la décharge</span><input type="text" data-c="setting" data-f="dechargeKw" value="${esc(s.dechargeKw||'')}" placeholder="décharge"></label><div class="small muted">Un jour de classe où l'agenda contient un événement avec ce mot devient un jour de direction. Pendant les vacances, il n'y a pas de classe.</div></div>`;
   html+=sec('Organisation de la journée')+`<div class="card"><div class="srow"><div class="grow">Agenda jour compact<div class="small muted">Affiche davantage d'heures à l'écran sur l'accueil</div></div><input type="checkbox" class="sw" data-c="setting" data-f="homeCompact" ${s.homeCompact!==false?'checked':''}></div><label class="fld"><span>Vacances scolaires affichées dans l'agenda</span><select data-c="setting" data-f="zone">${[['','Ne pas afficher'],['Zone A','Zone A'],['Zone B','Zone B'],['Zone C','Zone C'],['Corse','Corse']].map(([v,l])=>`<option value="${v}" ${s.zone===v?'selected':''}>${l}</option>`).join('')}</select></label><div class="row2"><label class="fld"><span>Début de journée</span><input type="time" data-c="setting" data-f="dayStart" value="${s.dayStart}"></label><label class="fld"><span>Fin de journée</span><input type="time" data-c="setting" data-f="dayEnd" value="${s.dayEnd}"></label></div><label class="fld"><span>Durée par défaut d'une tâche</span><select data-c="setting" data-f="defaultDuration">${[15,30,45,60,90,120].map(v=>`<option value="${v}" ${+s.defaultDuration===v?'selected':''}>${fmtDur(v)}</option>`).join('')}</select></label></div>`;
   html+=sec('Synchronisation & notifications')+`<div class="card"><button class="srow" style="width:100%;background:none;border:0;text-align:left;padding:10px 0" data-a="goSub" data-id="google"><span class="grow">🔗 Google Agenda</span><span class="muted">${s.clientId?(tokValid()?'Connecté':'Configuré'):'À configurer'} →</span></button><div class="srow"><span class="grow">🔔 Notifications des rappels<div class="small muted">Affichées quand l'app est ouverte ou en arrière-plan récent</div></span>${'Notification' in window?(s.notif&&Notification.permission==='granted'?'<span class="tag ok">Activées</span>':'<button class="btn sm primary" data-a="notifOn">Activer</button>'):'<span class="small muted">Non disponible</span>'}</div></div>`;
   html+=sec('Sauvegarde')+`<div class="card"><div class="small muted">Vos données restent sur ce téléphone. Exportez-les régulièrement (fichier .json avec images) pour ne rien perdre.${s.lastBackup?' Dernier export : '+fmtDate(iso(new Date(s.lastBackup)))+'.':''}</div><div style="display:flex;gap:8px;margin-top:10px"><button class="btn primary" data-a="export">💾 Exporter</button><button class="btn ghost" data-a="import">📂 Importer</button></div><div class="small muted" id="usage" style="margin-top:10px"></div></div>`;
@@ -1187,20 +1249,31 @@ function removeUndo(key,obj,label){
   });
 }
 
+window.thetaCat=el=>{const c=el.querySelector('input:checked');if(!c)return;const w=c.value==='travail';$('#wWork').style.display=w?'':'none';$('#wPerso').style.display=w?'none':''};
 window.thetaWhen=el=>{const c=el.querySelector('input:checked');if(!c)return;const v=c.value;$('#wDay').style.display=v==='day'?'':'none';$('#wMonth').style.display=v==='month'?'':'none'};
 function taskSheet(x,preset){
   const isNew=!x, pr=preset||{};
   const defDate=pr.date!==undefined?pr.date:(view==='taches'&&taskFilter!=='today'?'':(view==='jour'?addDays(today(),jourOff):today()));
-  const v=x||{title:'',date:defDate,time:pr.time||'',priority:'moyenne',duration:S.settings.defaultDuration};
-  const when=v.month?'month':(v.date?'day':'none');
+  const v=x||{title:'',date:defDate,time:pr.time||'',priority:'moyenne',duration:S.settings.defaultDuration,cat:S.settings.lastCat||'travail',urg:'non',imp:false};
+  const when=v.month?'month':(v.date?'day':'none'), cat=v.cat||'perso';
   sheetSteps=((x&&x.steps)||[]).map(st=>({...st})); sheetImgs=[...((x&&x.images)||pr.images||[])];
   openSheet(isNew?'Nouvelle tâche':'Modifier la tâche',
     fld('Intitulé',inp('title',v.title,'text','autofocus placeholder="Facultatif si photo"'))+
+    `<div onchange="thetaCat(this)">${fld('Catégorie',seg('cat',[['travail','💼 Travail'],['perso','🏠 Perso']],cat))}</div>`+
+    `<div id="wWork" class="crit" style="${cat==='travail'?'':'display:none'}">`+
+      fld('Urgence',seg('urg',Object.entries(URG).map(([k,[i,l]])=>[k,i+' '+l]),v.urg||'non'))+
+      `<div class="small muted crit-hint">🔥 dans la journée · ⚡ un mercredi ou un vendredi · 🌿 dès qu'un créneau se libère</div>`+
+      fld('Importance',seg('imp',[['1','⭐ Important'],['0','Pas important']],v.imp?'1':'0'))+
+      fld('Temps nécessaire',seg('dur',[['5','< 5 min'],['15','5–15'],['30','15–30'],['60','½–1 h'],['90','> 1 h']],String(durBucket(v.duration))))+
+    `</div>`+
     fld('Échéance',`<div onchange="thetaWhen(this)">${seg('when',[['day','📅 Un jour'],['month','🗓️ Un mois'],['none','Sans date']],when)}</div>`)+
     `<div class="row2" id="wDay" style="${when==='day'?'':'display:none'}">${fld('Date',inp('date',v.date||today(),'date'))}${fld('Heure (optionnel)',inp('time',v.time,'time'))}</div>`+
     `<div id="wMonth" style="${when==='month'?'':'display:none'}">${fld('Mois',inp('month',v.month||curMonth(),'month'))}</div>`+
-    fld('Priorité',seg('priority',[['haute','🔴 Haute'],['moyenne','🟠 Moyenne'],['basse','🟢 Basse']],v.priority))+
-    `<div class="row2">${fld('Durée estimée',selF('duration',[15,30,45,60,90,120,180,240].map(m=>[m,fmtDur(m)]),v.duration||30))}${fld('Répétition',selF('recur',RTASK,v.recur||'none'))}</div>`+
+    `<div id="wPerso" style="${cat==='travail'?'display:none':''}">`+
+      fld('Priorité',seg('priority',[['haute','🔴 Haute'],['moyenne','🟠 Moyenne'],['basse','🟢 Basse']],v.priority))+
+      fld('Durée estimée',selF('duration',[15,30,45,60,90,120,180,240].map(m=>[m,fmtDur(m)]),v.duration||30))+
+    `</div>`+
+    fld('Répétition',selF('recur',RTASK,v.recur||'none'))+
     fld('Sous-étapes',stepsHTML())+
     fld('Photos',imgBoxHTML(isNew?'title':''))+
     fld('Note',`<textarea name="notes" style="min-height:60px">${esc(v.notes||'')}</textarea>`)+
@@ -1211,7 +1284,11 @@ function taskSheet(x,preset){
       let date=w==='day'?(fd.date||today()):'', recur=w==='month'?'none':fd.recur;
       if(w==='none'&&recur!=='none') date=today();
       commitImgs(o);
-      Object.assign(o,{title,date,time:w==='day'?fd.time:'',month:w==='month'?(fd.month||curMonth()):null,priority:fd.priority,duration:+fd.duration,notes:fd.notes.trim(),recur,steps:readSteps()});
+      const work=fd.cat==='travail';
+      Object.assign(o,{title,date,time:w==='day'?fd.time:'',month:w==='month'?(fd.month||curMonth()):null,notes:fd.notes.trim(),recur,steps:readSteps(),cat:work?'travail':'perso'});
+      if(work) Object.assign(o,{urg:fd.urg||'non',imp:fd.imp==='1',duration:+fd.dur||30,priority:{tres:'haute',urgent:'moyenne',non:'basse'}[fd.urg||'non']});
+      else Object.assign(o,{priority:fd.priority,duration:+fd.duration});
+      S.settings.lastCat=o.cat;
       if(x&&x.noSync&&!fd.noSync) o.noSync=false;
       if(isNew) S.tasks.push(o);
       markPending(o,'task'); save(); render(); toast(isNew?'✅ Tâche ajoutée':'Tâche modifiée');
@@ -1993,8 +2070,10 @@ const A={
     if(x.done){navigator.vibrate&&navigator.vibrate(10);const nx=x.nextId&&S.tasks.find(t=>t.id===x.nextId);toast('Bravo ! « '+x.title+' » est fait'+(nx?' · prochaine : '+fmtDate(nx.date):''),'Annuler',()=>A.toggleTask(id))}
   },
   taskFilter(id){ taskFilter=id; render(); },
-  plan(id,el){ const x=S.tasks.find(x=>x.id===id); if(!x) return; x.date=today(); x.time=el.dataset.v; markPending(x,'task'); save(); render(); toast('🗓️ Planifiée à '+x.time); },
-  planAll(){ const sg=suggest(); sg.forEach(s=>{s.task.date=today();s.task.time=fromMin(s.start);markPending(s.task,'task')}); save(); render(); toast('✨ '+plural(sg.length,'tâche planifiée','tâches planifiées')); },
+  taskCat(id){ taskCat=id; render(); },
+  toggleDay(id){ const[k,n]=id.split(':'), key=k==='class'?'classDays':'directionDays', v=+n, arr=[...(S.settings[key]||[])], i=arr.indexOf(v); if(i<0)arr.push(v); else arr.splice(i,1); S.settings[key]=arr.sort(); save(); render(); },
+  plan(id,el){ const x=S.tasks.find(x=>x.id===id); if(!x) return; x.date=el.dataset.d||today(); x.time=el.dataset.v; markPending(x,'task'); save(); render(); toast('🗓️ Planifiée à '+x.time); },
+  planAll(id,el){ const d=(el&&el.dataset.d)||today(), sg=suggest(d); sg.forEach(s=>{s.task.date=d;s.task.time=fromMin(s.start);markPending(s.task,'task')}); save(); render(); toast('✨ '+plural(sg.length,'tâche planifiée','tâches planifiées')); },
   // Agenda
   newEvent(){ eventSheet(null); },
   editEvent(id){ const e=S.events.find(e=>e.id===id); if(e) eventSheet(e); },
