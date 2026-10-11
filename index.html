@@ -409,7 +409,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.7.8';
+const VERSION='3.7.9';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -898,11 +898,13 @@ let agMode='liste', agDay=null;
 const agCur=()=>agDay||today();
 const agendaModeChips=()=>chips([['liste','Liste'],['jour','Jour'],['semaine','Semaine'],['mois','Mois']],agMode,'agendaMode',true);
 const agendaNav=label=>`<div class="agnav"><button class="icon-btn" data-a="agendaStep" data-id="-1" aria-label="Précédent">‹</button><button class="chip" data-a="agendaToday">Aujourd'hui</button><b class="agtitle">${label}</b><button class="icon-btn" data-a="agendaStep" data-id="1" aria-label="Suivant">›</button></div>`;
+const agTasksOn=d=>S.tasks.filter(x=>x.date===d&&!x.done).sort(byTime);
+const agTaskList=d=>{const L=agTasksOn(d);return L.length?`<div class="list">${L.map(taskRow).join('')}</div>`:''};
 function agendaDayView(){
-  const t=agCur(), hol=holidayOn(t), sans=S.tasks.filter(x=>x.date===t&&!x.time&&!x.done);
+  const t=agCur(), hol=holidayOn(t);
   return agendaNav(fmtLong(t)+(t===today()?' · aujourd\'hui':''))
     +(hol?`<div class="list" style="margin-bottom:10px">${holiHTML(hol)}</div>`:'')
-    +(sans.length?`<div class="list" style="margin-bottom:10px">${sans.map(x=>taskRow(x)).join('')}</div>`:'')
+    +sec(fmtLong(t),agTasksOn(t).length||null)+(agTasksOn(t).length?agTaskList(t):'<div class="small muted agw-empty">Aucune tâche ce jour-là</div>')
     +dayTimeline(t,t===today(),t===today()?suggest():[]);
 }
 function agendaWeekView(){
@@ -933,7 +935,8 @@ function agendaWeekView(){
     const blocks=B.map(b=>`<div class="wk-ev ${b.k==='t'?'task':''}" data-drag="${b.k==='t'?'task':'ev'}" data-mode="t" data-d="${d}" data-s="${b.s}" data-dur="${b.e-b.s}" data-ppm="${PX}" data-a="${b.k==='e'?'editEvent':'editTask'}" data-id="${b.o.id}" style="top:${(b.s-H0)*PX}px;height:${Math.max(18,(b.e-b.s)*PX-2)}px;left:calc(${b.col*100/b.n}% + 1px);width:calc(${100/b.n}% - 2px);${b.c?'background:'+esc(b.c):''}"><b>${esc(b.o.title)}</b><small>${fromMin(b.s)}</small></div>`).join('');
     body+=`<div class="wk-col" data-tdrop="${d}" data-a="wkSlot" data-d="${d}" data-h0="${H0}" data-ppm="${PX}" style="height:${H}px">${hrs.map(m=>`<i class="wk-hr" style="top:${(m-H0)*PX}px"></i>`).join('')}${blocks}</div>`;
   });
-  return agendaNav('Semaine du '+M.getDate()+' '+MOIS_A[M.getMonth()])+`<div class="wk">${head}${allR}${body}</div>`;
+  const lists=days.map(d=>{const L=agTasksOn(d);return L.length?sec(fmtLong(d),L.length)+agTaskList(d):''}).join('');
+  return agendaNav('Semaine du '+M.getDate()+' '+MOIS_A[M.getMonth()])+`<div class="wk">${head}${allR}${body}</div>`+(lists||'<div class="small muted agw-empty" style="margin-top:12px">Aucune tâche cette semaine</div>');
 }
 function agendaMonthView(){
   const t=agCur(), D=parseD(t), first=iso(new Date(D.getFullYear(),D.getMonth(),1));
@@ -949,7 +952,9 @@ function agendaMonthView(){
     cells+=`<button class="gm-cell ${d===t?'sel':''} ${hol?'hol':''}" data-a="agendaDay" data-id="${d}" data-tdrop="${d}" aria-label="${fmtLong(d)}"><span class="gm-num ${d===today()?'today':''}">${n}</span>${shown}${more}</button>`;
   }
   const head='LMMJVSD'.split('').map(c=>`<span class="gm-h">${c}</span>`).join('');
-  return agendaNav(cap(MOIS_A[D.getMonth()])+' '+D.getFullYear())+`<div class="gm">${head}${cells}</div>`;
+  let lists='';
+  for(let n=1;n<=dim;n++){const d=addDays(first,n-1);const L=agTasksOn(d);if(L.length) lists+=sec(fmtLong(d),L.length)+agTaskList(d)}
+  return agendaNav(cap(MOIS_A[D.getMonth()])+' '+D.getFullYear())+`<div class="gm">${head}${cells}</div>`+(lists||'<div class="small muted agw-empty" style="margin-top:12px">Aucune tâche ce mois-ci</div>');
 }
 VIEWS.agenda=()=>{
   if(agMode!=='liste'){
