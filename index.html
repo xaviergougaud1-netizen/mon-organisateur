@@ -245,6 +245,9 @@ body.vjour #main{touch-action:pan-y}
 .agw-head span{opacity:.6}
 .agw-empty{padding:0 12px 4px}
 .agcard{padding:10px;margin-bottom:8px}
+.agday-h{display:flex;justify-content:space-between;align-items:center;padding:10px 6px 6px;font-size:13px;font-weight:750;opacity:.9}
+.agday-h span{font-size:12px;opacity:.6;font-weight:650}
+.agday-h:not(:first-child){margin-top:6px;border-top:1px solid var(--card3);padding-top:12px}
 .gm{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--card3);border-left:1px solid var(--card3)}
 .gm-h{text-align:center;font-size:11px;font-weight:700;opacity:.6;padding:6px 0}
 .gm-cell{min-height:84px;min-width:0;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:3px 2px;background:none;border:0;border-right:1px solid var(--card3);border-bottom:1px solid var(--card3);color:var(--text);font:inherit;text-align:left;cursor:pointer}
@@ -410,7 +413,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.8.0';
+const VERSION='3.8.1';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -749,6 +752,12 @@ function taskRow(x){
   const th=x.images&&x.images.length?`<img class="tthumb" data-img="${x.images[0]}" data-a="viewImg" data-id="${x.images[0]}" alt="">`:'';
   return `<div class="item ${x.done?'done':''} ${(x.steps&&x.steps.length)||subAddFor==='task:'+x.id?'top':''}"><button class="chk ${x.done?'on':''}" data-a="toggleTask" data-id="${x.id}" aria-label="Terminer"></button><div class="grow" data-a="editTask" data-id="${x.id}"><div class="ttl">${esc(x.title)}</div><div class="meta">${m.join('')}</div>${subList(x,'task')}</div>${th}${x.done?'':subBtn(x,'task')}<span class="prio p-${x.priority}"></span></div>`;
 }
+function taskRowLite(x){
+  const sy=syncTag(x);
+  return `<div class="item ${x.done?'done':''} ${(x.steps&&x.steps.length)||subAddFor==='task:'+x.id?'top':''}"><button class="chk ${x.done?'on':''}" data-a="toggleTask" data-id="${x.id}" aria-label="Terminer"></button><div class="grow" data-a="editTask" data-id="${x.id}"><div class="ttl">${esc(x.title)}</div>${sy?`<div class="meta">${sy}</div>`:''}${subList(x,'task')}</div>${x.done?'':subBtn(x,'task')}<span class="prio p-${x.priority}"></span></div>`;
+}
+// Un seul cadre pour un ensemble de tâches (sans sous-cadres)
+const taskCard=(L,extra='')=>`<div class="card agcard">${extra}<div class="list">${L.map(taskRowLite).join('')}</div></div>`;
 function eventRow(e,day){
   const c=S.settings.calendars.find(c=>c.id===e.calId);
   const color=(c&&c.color)||e.color||'var(--a1)';
@@ -816,17 +825,16 @@ VIEWS.jour=()=>{
   const D=parseD(t), label=isToday?hello+' 👋':jourOff===1?'Demain':cap(JOURS[D.getDay()]);
   const subl=[all.length?`${dn} / ${plural(all.length,'tâche')} accomplie${dn>1?'s':''}`:'',late.length?`${late.length} en retard`:'',evs.length?plural(evs.length,'événement'):'',rems.length?plural(rems.length,'rappel'):''].filter(Boolean).join(' · ')||(isToday?'Rien de prévu : profitez-en':'Rien de prévu ce jour-là');
   let html=`<div class="hero">${isToday?'':`<div class="hero-date">${jourOff===1?'Demain':'Dans '+jourOff+' jours'}</div>`}<div class="hero-day">${cap(JOURS[D.getDay()])} ${D.getDate()} ${MOIS_A[D.getMonth()]}</div><div class="hero-sub">${subl}</div>${miniStrip(T)}<button class="hero-sync" data-a="sync" aria-label="Synchroniser avec Google Agenda">🔄</button></div>`;
-  const hol=holidayOn(t); if(hol) html+=`<div style="margin-top:12px">${holiHTML(hol)}</div>`;
 
   const nrev=S.notes.filter(n=>n.status==='review').length;
   if(nrev) html+=sec('À ranger',nrev)+reviewCards();
   if(isToday&&hasData&&!S.settings.driveFileId&&(!S.settings.lastBackup||Date.now()-S.settings.lastBackup>14*864e5)) html+=`<button class="banner" data-a="export">💾 Pensez à sauvegarder vos données<span class="grow"></span>Exporter</button>`;
-  if(open.length) html+=sec(isToday?'Tâches du jour':'Tâches',open.length)+`<div class="list">${open.map(taskRow).join('')}</div>`;
-  if(late.length||lateR.length) html+=sec('En retard',late.length+lateR.length)+`<div class="list">${late.map(taskRow).join('')}${lateR.map(remRow).join('')}</div>`;
+  if(open.length) html+=sec(isToday?'Tâches du jour':'Tâches',open.length)+taskCard(open);
+  if(late.length||lateR.length) html+=sec('En retard',late.length+lateR.length)+`<div class="card agcard"><div class="list">${late.map(taskRowLite).join('')}${lateR.map(remRow).join('')}</div></div>`;
   html+=sec('Ma journée')+dayTimeline(t,isToday,sug);
   if(sug.length>1) html+=`<button class="btn sm primary block" data-a="planAll" style="margin-top:0">✨ Caser automatiquement ${plural(sug.length,'tâche')}</button>`;
   if(rems.length) html+=sec('Rappels',rems.length)+`<div class="list">${rems.map(r=>remRow(r,t)).join('')}</div>`;
-  if(monthT.length) html+=sec('🗓️ Ce mois-ci · '+fmtMonth(tm),monthT.length)+`<div class="list">${monthT.map(taskRow).join('')}</div>`;
+  if(monthT.length) html+=sec('🗓️ Ce mois-ci · '+fmtMonth(tm),monthT.length)+taskCard(monthT);
   if(isToday&&S.habits.length) html+=sec('Habitudes')+`<div class="hchips">${S.habits.map(hb=>`<button class="chip ${hb.log[t]?'on':''}" data-a="habitDay" data-id="${hb.id}" data-v="${t}">${esc(hb.emoji||'⭐')} ${esc(hb.name)}</button>`).join('')}</div>`;
   if(nAcc) html+=sec(isToday?'Accompli aujourd\'hui':'Accompli',nAcc)+`<div class="list">${accT.map(taskRow).join('')}${accR.map(r=>remRow(r,t)).join('')}${accI.map(itemDoneRow).join('')}</div><p class="small muted" style="text-align:center;margin:8px 0 0">Touchez une coche pour annuler.</p>`;
   return {title:isToday?'Aujourd\'hui':jourOff===1?'Demain':cap(JOURS[D.getDay()])+' '+D.getDate(),html,mic:'jour',fab:'quickAdd'};
@@ -900,8 +908,8 @@ const agCur=()=>agDay||today();
 const agendaModeChips=()=>chips([['liste','Liste'],['jour','Jour'],['semaine','Semaine'],['mois','Mois']],agMode,'agendaMode',true);
 const agendaNav=label=>`<div class="agnav"><button class="icon-btn" data-a="agendaStep" data-id="-1" aria-label="Précédent">‹</button><button class="chip" data-a="agendaToday">Aujourd'hui</button><b class="agtitle">${label}</b><button class="icon-btn" data-a="agendaStep" data-id="1" aria-label="Suivant">›</button></div>`;
 const agTasksOn=d=>S.tasks.filter(x=>x.date===d&&!x.done).sort(byTime);
-const agTaskList=d=>{const L=agTasksOn(d);return L.length?`<div class="card agcard"><div class="list">${L.map(taskRow).join('')}</div></div>`:''};
-const agTaskCard=(L,title)=>L.length?sec(title,L.length)+`<div class="card agcard"><div class="list">${L.map(taskRow).join('')}</div></div>`:'';
+const agTaskList=d=>{const L=agTasksOn(d);return L.length?taskCard(L):''};
+const agDayLabel=(txt,n)=>`<div class="agday-h">${txt}<span>${n}</span></div>`;
 function agendaDayView(){
   const t=agCur(), hol=holidayOn(t);
   return agendaNav(fmtLong(t)+(t===today()?' · aujourd\'hui':''))
@@ -936,8 +944,9 @@ function agendaWeekView(){
     const blocks=B.map(b=>`<div class="wk-ev ${b.k==='t'?'task':''}" data-drag="${b.k==='t'?'task':'ev'}" data-mode="t" data-d="${d}" data-s="${b.s}" data-dur="${b.e-b.s}" data-ppm="${PX}" data-a="${b.k==='e'?'editEvent':'editTask'}" data-id="${b.o.id}" style="top:${(b.s-H0)*PX}px;height:${Math.max(18,(b.e-b.s)*PX-2)}px;left:calc(${b.col*100/b.n}% + 1px);width:calc(${100/b.n}% - 2px);${b.c?'background:'+esc(b.c):''}"><b>${esc(b.o.title)}</b><small>${fromMin(b.s)}</small></div>`).join('');
     body+=`<div class="wk-col" data-tdrop="${d}" data-a="wkSlot" data-d="${d}" data-h0="${H0}" data-ppm="${PX}" style="height:${H}px">${hrs.map(m=>`<i class="wk-hr" style="top:${(m-H0)*PX}px"></i>`).join('')}${blocks}</div>`;
   });
-  const lists=days.map(d=>{const L=agTasksOn(d);return L.length?sec(fmtLong(d),L.length)+agTaskList(d):''}).join('');
-  return agendaNav('Semaine du '+M.getDate()+' '+MOIS_A[M.getMonth()])+`<div class="wk">${head}${allR}${body}</div>`+(lists||'<div class="small muted agw-empty" style="margin-top:12px">Aucune tâche cette semaine</div>');
+  const groups=days.map(d=>{const L=agTasksOn(d);return L.length?agDayLabel(fmtLong(d),L.length)+`<div class="list">${L.map(taskRowLite).join('')}</div>`:''}).join('');
+  const lists=groups?`<div class="card agcard">${groups}</div>`:'<div class="small muted agw-empty" style="margin-top:12px">Aucune tâche cette semaine</div>';
+  return agendaNav('Semaine du '+M.getDate()+' '+MOIS_A[M.getMonth()])+`<div class="wk">${head}${allR}${body}</div>`+lists;
 }
 function agendaMonthView(){
   const t=agCur(), D=parseD(t), first=iso(new Date(D.getFullYear(),D.getMonth(),1));
@@ -953,9 +962,10 @@ function agendaMonthView(){
     cells+=`<button class="gm-cell ${d===t?'sel':''} ${hol?'hol':''}" data-a="agendaDay" data-id="${d}" data-tdrop="${d}" aria-label="${fmtLong(d)}"><span class="gm-num ${d===today()?'today':''}">${n}</span>${shown}${more}</button>`;
   }
   const head='LMMJVSD'.split('').map(c=>`<span class="gm-h">${c}</span>`).join('');
-  const mk=first.slice(0,7);
-  let lists=agTaskCard(S.tasks.filter(x=>x.month===mk&&!x.done).sort(byTime),'Tâches du mois · '+cap(MOIS_A[D.getMonth()]));
-  for(let n=1;n<=dim;n++){const d=addDays(first,n-1);const L=agTasksOn(d);if(L.length) lists+=sec(fmtLong(d),L.length)+agTaskList(d)}
+  const mk=first.slice(0,7), mt=S.tasks.filter(x=>x.month===mk&&!x.done).sort(byTime);
+  let groups=mt.length?agDayLabel('Tâches du mois · '+cap(MOIS_A[D.getMonth()]),mt.length)+`<div class="list">${mt.map(taskRowLite).join('')}</div>`:'';
+  for(let n=1;n<=dim;n++){const d=addDays(first,n-1);const L=agTasksOn(d);if(L.length) groups+=agDayLabel(fmtLong(d),L.length)+`<div class="list">${L.map(taskRowLite).join('')}</div>`}
+  const lists=groups?`<div class="card agcard">${groups}</div>`:'';
   return agendaNav(cap(MOIS_A[D.getMonth()])+' '+D.getFullYear())+`<div class="gm">${head}${cells}</div>`+(lists||'<div class="small muted agw-empty" style="margin-top:12px">Aucune tâche ce mois-ci</div>');
 }
 VIEWS.agenda=()=>{
