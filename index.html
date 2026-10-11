@@ -244,6 +244,7 @@ body.vjour #main{touch-action:pan-y}
 .agw-head.today{border:2px solid var(--a1)}
 .agw-head span{opacity:.6}
 .agw-empty{padding:0 12px 4px}
+.agcard{padding:10px;margin-bottom:8px}
 .gm{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:1px solid var(--card3);border-left:1px solid var(--card3)}
 .gm-h{text-align:center;font-size:11px;font-weight:700;opacity:.6;padding:6px 0}
 .gm-cell{min-height:84px;min-width:0;overflow:hidden;display:flex;flex-direction:column;align-items:stretch;gap:2px;padding:3px 2px;background:none;border:0;border-right:1px solid var(--card3);border-bottom:1px solid var(--card3);color:var(--text);font:inherit;text-align:left;cursor:pointer}
@@ -409,7 +410,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.7.9';
+const VERSION='3.8.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -899,11 +900,11 @@ const agCur=()=>agDay||today();
 const agendaModeChips=()=>chips([['liste','Liste'],['jour','Jour'],['semaine','Semaine'],['mois','Mois']],agMode,'agendaMode',true);
 const agendaNav=label=>`<div class="agnav"><button class="icon-btn" data-a="agendaStep" data-id="-1" aria-label="Précédent">‹</button><button class="chip" data-a="agendaToday">Aujourd'hui</button><b class="agtitle">${label}</b><button class="icon-btn" data-a="agendaStep" data-id="1" aria-label="Suivant">›</button></div>`;
 const agTasksOn=d=>S.tasks.filter(x=>x.date===d&&!x.done).sort(byTime);
-const agTaskList=d=>{const L=agTasksOn(d);return L.length?`<div class="list">${L.map(taskRow).join('')}</div>`:''};
+const agTaskList=d=>{const L=agTasksOn(d);return L.length?`<div class="card agcard"><div class="list">${L.map(taskRow).join('')}</div></div>`:''};
+const agTaskCard=(L,title)=>L.length?sec(title,L.length)+`<div class="card agcard"><div class="list">${L.map(taskRow).join('')}</div></div>`:'';
 function agendaDayView(){
   const t=agCur(), hol=holidayOn(t);
   return agendaNav(fmtLong(t)+(t===today()?' · aujourd\'hui':''))
-    +(hol?`<div class="list" style="margin-bottom:10px">${holiHTML(hol)}</div>`:'')
     +sec(fmtLong(t),agTasksOn(t).length||null)+(agTasksOn(t).length?agTaskList(t):'<div class="small muted agw-empty">Aucune tâche ce jour-là</div>')
     +dayTimeline(t,t===today(),t===today()?suggest():[]);
 }
@@ -952,7 +953,8 @@ function agendaMonthView(){
     cells+=`<button class="gm-cell ${d===t?'sel':''} ${hol?'hol':''}" data-a="agendaDay" data-id="${d}" data-tdrop="${d}" aria-label="${fmtLong(d)}"><span class="gm-num ${d===today()?'today':''}">${n}</span>${shown}${more}</button>`;
   }
   const head='LMMJVSD'.split('').map(c=>`<span class="gm-h">${c}</span>`).join('');
-  let lists='';
+  const mk=first.slice(0,7);
+  let lists=agTaskCard(S.tasks.filter(x=>x.month===mk&&!x.done).sort(byTime),'Tâches du mois · '+cap(MOIS_A[D.getMonth()]));
   for(let n=1;n<=dim;n++){const d=addDays(first,n-1);const L=agTasksOn(d);if(L.length) lists+=sec(fmtLong(d),L.length)+agTaskList(d)}
   return agendaNav(cap(MOIS_A[D.getMonth()])+' '+D.getFullYear())+`<div class="gm">${head}${cells}</div>`+(lists||'<div class="small muted agw-empty" style="margin-top:12px">Aucune tâche ce mois-ci</div>');
 }
@@ -971,7 +973,6 @@ VIEWS.agenda=()=>{
     html+=`<div class="card status"><span style="font-size:22px">${tokValid()?'🟢':'🟡'}</span><div class="grow small">${tokValid()?'Connecté à Google Agenda':'Session Google à rouvrir'}<div class="muted">${s.lastSync?'Dernière synchro : '+fmtDate(iso(new Date(s.lastSync)))+' '+hhmm(new Date(s.lastSync)):'Jamais synchronisé'}${pend?' · '+pend+' en attente':''}</div></div><button class="btn sm primary" data-a="sync">Synchroniser</button></div>`;
   } else html+=`<button class="banner" data-a="goSub" data-id="google">🔗 Connecter Google Agenda (synchro dans les 2 sens)<span class="grow"></span>→</button>`;
   html+=`<div style="margin-top:12px">${chips([['0','À venir'],['1','Avec les 30 derniers jours']],agendaPast?'1':'0','agendaPast')}</div>`;
-  if(S.settings.zone&&S.holidays) S.holidays.list.forEach(h=>{const d=h.start<from?from:h.start;if(h.end>=from&&d<=to)add(d,{k:'h',o:h,s:'00:00'})});
   const keys=Object.keys(days).sort();
   if(!keys.length) html+=empty('📅','Aucun événement','Ajoutez un événement avec +, ou synchronisez Google Agenda.');
   for(const d of keys){
