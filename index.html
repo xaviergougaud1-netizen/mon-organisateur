@@ -429,7 +429,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.10.2';
+const VERSION='3.11.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -516,7 +516,7 @@ function defaults(){
     folders:[tr,f('Conseil des maîtres',tr.id,3,'🧑‍🏫'),f('Conseil du vendredi',tr.id,5,'🗓️'),f("Conseil d'école",tr.id,1,'🏫'),f('Conseil de cycle',tr.id,4,'🔄'),f('Achat pour la classe',tr.id,6,'🛒'),f('Travaux',null,2,'🔨')],
     settings:{navPos:'bottom',theme:'dark',accent:'nuit',tabOrder:['jour','taches','todo','agenda','notes'],dayStart:'08:00',dayEnd:'20:00',defaultDuration:30,
       classDays:[1,2,4],classStart:'09:00',classEnd:'16:45',directionDays:[5],dechargeKw:'décharge',
-      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,lastSync:null,notif:false,lastBackup:null,bg:'shape',bgShape:'montagnes',bgColor:'auto',bgBright:100,bgVeil:45,bgBlur:0,bgVer:0,font:'system',homeAdd:false,homePhoto:false,homeKeyboard:false,palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
+      clientId:'',calendars:[],targetCal:'primary',pushTasks:true,autoSync:true,driveSync:true,lastSync:null,notif:false,lastBackup:null,bg:'shape',bgShape:'montagnes',bgColor:'auto',bgBright:100,bgVeil:45,bgBlur:0,bgVer:0,font:'system',homeAdd:false,homePhoto:false,homeKeyboard:false,palette:'theta',tabIcons:{},navLift:4,mapsKey:'',zone:'',pushReminders:true,driveBackup:true,driveFileId:null,lastDriveBackup:null}};
 }
 function load(){
   try{const raw=localStorage.getItem(KEY);S=raw?JSON.parse(raw):defaults()}catch(e){S=defaults()}
@@ -537,6 +537,8 @@ function normalizeState(){
   S.settings.tabOrder=order;
 }
 function save(){
+  let ch=false; try{ ch=stamp(); }catch(e){ console.warn(e) }
+  if(ch&&typeof queueSync==='function') queueSync();
   try{localStorage.setItem(KEY,JSON.stringify(S))}
   catch(e){toast('⚠️ Mémoire pleine : exportez une sauvegarde')}
 }
@@ -1232,7 +1234,7 @@ SUBS.google=()=>{
     html+=sec('Agendas importés')+`<div class="card">${s.calendars.map(c=>{const ro=['reader','freeBusyReader'].includes(c.role);return `<div class="srow"><span class="cdot" style="background:${esc(c.color)}"></span><div class="grow">${esc(c.name)}<div class="small muted">${ro?'lecture seule':c.id===s.targetCal?'⭐ agenda par défaut':`<button class="btn sm ghost" data-a="setTarget" data-id="${esc(c.id)}" style="padding:3px 8px;margin-top:3px">Définir par défaut</button>`}</div></div><input type="checkbox" class="sw" data-c="calImport" data-id="${esc(c.id)}" ${c.import?'checked':''} aria-label="Importer"></div>`}).join('')}<button class="btn sm ghost block" data-a="gReloadCals">Actualiser la liste</button></div>`;
   }
   html+=sec('Google Maps (suggestions de lieux)')+`<div class="card"><label class="fld"><span>Clé API Google Maps</span><input type="text" data-c="setting" data-f="mapsKey" value="${esc(s.mapsKey||'')}" placeholder="AIza…" autocomplete="off"></label><details class="guide"><summary>Obtenir la clé (5 min)</summary><ol><li>Console Google › <b>API et services › Bibliothèque</b> : activez <b>Maps JavaScript API</b> et <b>Places API (New)</b>. Google Maps exige un compte de facturation, mais l'usage personnel reste dans le crédit gratuit mensuel.</li><li><b>Identifiants › Créer des identifiants › Clé API</b>.</li><li>Ouvrez la clé : <b>Restrictions › Sites Web</b>, ajoutez <code>${esc(location.origin)}/*</code> ; <b>Restrictions d'API</b> : Maps JavaScript API et Places API (New).</li><li>Copiez la clé ici. Dans un événement, tapez 3 lettres du lieu : les adresses apparaissent.</li></ol></details></div>`;
-  html+=sec('Sauvegarde Google Drive')+`<div class="card"><div class="srow"><div class="grow">Sauvegarde automatique quotidienne<div class="small muted">${S.settings.lastDriveBackup?'Dernière : '+fmtDate(iso(new Date(S.settings.lastDriveBackup)))+' à '+hhmm(new Date(S.settings.lastDriveBackup)):'Pas encore de sauvegarde'} · fichier « ${DRIVE_NAME} » dans ton Drive</div></div><input type="checkbox" class="sw" data-c="setting" data-f="driveBackup" ${s.driveBackup?'checked':''}></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${ok&&hasDrive()?`<button class="btn sm primary" data-a="driveNow">☁️ Sauvegarder maintenant</button>`:`<button class="btn sm primary" data-a="gDriveAuth" ${s.clientId?'':'disabled'}>☁️ Autoriser Google Drive</button>`}<button class="btn sm ghost" data-a="driveRestore" ${s.clientId?'':'disabled'}>Restaurer depuis Drive</button></div></div>`;
+  html+=sec('Sauvegarde Google Drive')+`<div class="card"><div class="srow"><div class="grow">Synchroniser toutes mes données entre mes appareils<div class="small muted">Tâches, notes, rappels, habitudes, bibliothèque et emploi du temps passent du PC au téléphone et inversement. ${S.settings.lastDriveSync?'Dernière synchro : '+fmtDate(iso(new Date(S.settings.lastDriveSync)))+' à '+hhmm(new Date(S.settings.lastDriveSync)):'Pas encore synchronisé'}. Les photos restent sur chaque appareil.</div></div><input type="checkbox" class="sw" data-c="setting" data-f="driveSync" ${s.driveSync!==false?'checked':''}></div><div class="srow"><div class="grow">Sauvegarde automatique quotidienne<div class="small muted">${S.settings.lastDriveBackup?'Dernière : '+fmtDate(iso(new Date(S.settings.lastDriveBackup)))+' à '+hhmm(new Date(S.settings.lastDriveBackup)):'Pas encore de sauvegarde'} · fichier « ${DRIVE_NAME} » dans ton Drive</div></div><input type="checkbox" class="sw" data-c="setting" data-f="driveBackup" ${s.driveBackup?'checked':''}></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${ok&&hasDrive()?`<button class="btn sm primary" data-a="driveNow">☁️ Sauvegarder maintenant</button>`:`<button class="btn sm primary" data-a="gDriveAuth" ${s.clientId?'':'disabled'}>☁️ Autoriser Google Drive</button>`}<button class="btn sm ghost" data-a="driveRestore" ${s.clientId?'':'disabled'}>Restaurer depuis Drive</button></div></div>`;
   html+=sec('Options')+`<div class="card"><div class="srow"><div class="grow">Rappels avec alerte sur le téléphone<div class="small muted">Chaque rappel est ajouté à Google Agenda (🔔) avec une notification : ton téléphone sonne même Thêta fermée. Sans heure : à ${esc(s.dayStart)}.</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushReminders" ${s.pushReminders?'checked':''}></div><div class="srow"><div class="grow">Envoyer aussi les tâches datées<div class="small muted">Elles apparaissent avec ✅ dans l'agenda par défaut</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushTasks" ${s.pushTasks?'checked':''}></div><div class="srow"><div class="grow">Synchro automatique<div class="small muted">À l'ouverture et après chaque modification, tant que la session Google est active (1 h)</div></div><input type="checkbox" class="sw" data-c="setting" data-f="autoSync" ${s.autoSync?'checked':''}></div></div>`;
   html+=`<details class="card guide" style="margin-top:14px" ${s.clientId?'':'open'}><summary>Guide : obtenir l'identifiant client (10 min, une seule fois)</summary><ol>
 <li>Ouvrez <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">console.cloud.google.com</a> et créez un projet « Thêta ».</li>
@@ -1777,8 +1779,8 @@ function loadGIS(){
   gisP=new Promise((res,rej)=>{const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;s.onload=()=>res();s.onerror=()=>{gisP=null;s.remove();rej(new Error('Impossible de joindre Google (connexion ?)'))};document.head.appendChild(s)});
   return gisP;
 }
-function getToken(interactive){
-  if(tokValid()) return Promise.resolve(gTok.t);
+function getToken(interactive,force){
+  if(!force&&tokValid()) return Promise.resolve(gTok.t);
   if(!interactive) return Promise.reject(new Error('auth'));
   const cid=S.settings.clientId.trim();
   if(!cid) return Promise.reject(new Error('Renseignez l\'identifiant client dans Plus › Google Agenda'));
@@ -1845,7 +1847,7 @@ function fromG(g){
 }
 function queueSync(){
   if(!S.settings.autoSync||!S.settings.clientId||!tokValid()) return;
-  clearTimeout(syncT); syncT=setTimeout(()=>sync(false),6000);
+  clearTimeout(syncT); syncT=setTimeout(()=>sync(false),1500);
 }
 async function sync(interactive){
   if(syncing) return;
@@ -1893,17 +1895,19 @@ async function sync(interactive){
         if(res) r.gid=res.id; r.calId=cal; r.sync='ok'; up++; save();
       }catch(err){ if(err.message==='auth') throw err; failed.push(r.title); }
     }
-    // 4. réception depuis Google
+    // 4. réception depuis Google (incrémentale : seulement ce qui a changé depuis la dernière synchro)
+    const incr=!interactive&&S.settings.lastFullSync&&S.settings.lastSync&&Date.now()-S.settings.lastFullSync<12*36e5;
     const tMin=new Date();tMin.setDate(tMin.getDate()-30);tMin.setHours(0,0,0,0);
     const tMax=new Date();tMax.setDate(tMax.getDate()+120);
     const minD=iso(tMin),maxD=iso(tMax);
     for(const c of S.settings.calendars.filter(c=>c.import)){
       const list=[];let page=null,g=0;
-      do{const q=new URLSearchParams({timeMin:tMin.toISOString(),timeMax:tMax.toISOString(),singleEvents:'true',maxResults:'2500'});if(page)q.set('pageToken',page);
+      do{const q=new URLSearchParams({timeMin:tMin.toISOString(),timeMax:tMax.toISOString(),singleEvents:'true',maxResults:'2500'});if(incr){q.set('updatedMin',new Date(S.settings.lastSync-10*60e3).toISOString());q.set('showDeleted','true')}if(page)q.set('pageToken',page);
         const r=await gapi('GET',`/calendars/${enc(c.id)}/events?${q}`);list.push(...(r.items||[]));page=r.nextPageToken}while(page&&g++<10);
       const seen=new Set();
       for(const ge of list){
-        if(ge.status==='cancelled'||!ge.start) continue;
+        if(ge.status==='cancelled'){ if(incr){ const n0=S.events.length; S.events=S.events.filter(e=>!(e.gid===ge.id&&e.sync!=='pending')); down+=n0-S.events.length; S.tasks.forEach(x=>{if(x.gid===ge.id&&x.sync!=='pending'){x.gid=null;x.sync=null;x.noSync=true}}); } continue; }
+        if(!ge.start) continue;
         seen.add(ge.id);
         const mo=ge.extendedProperties&&ge.extendedProperties.private;
         if(mo&&mo.moType==='reminder') continue;
@@ -1920,12 +1924,15 @@ async function sync(interactive){
         Object.assign(e,{title:ge.summary||'(Sans titre)',date:f.date,endDate:f.endDate,start:f.start,end:f.end,place:ge.location||'',notes:(ge.description||'').replace(/<[^>]+>/g,' ').trim(),calId:c.id,calName:c.name,color:c.color,sync:'ok',gUpdated:ge.updated,readonly:['reader','freeBusyReader'].includes(c.role)});
         down++;
       }
+      if(incr) continue;
       const before=S.events.length;
       S.events=S.events.filter(e=>!(e.gid&&e.calId===c.id&&e.sync!=='pending'&&e.date>=minD&&e.date<=maxD&&!seen.has(e.gid)));
       down+=before-S.events.length;
       S.tasks.forEach(x=>{if(x.gid&&x.calId===c.id&&x.sync!=='pending'&&x.date>=minD&&x.date<=maxD&&!seen.has(x.gid)){x.gid=null;x.sync=null;x.noSync=true}});
     }
-    S.settings.lastSync=Date.now(); save();
+    S.settings.lastSync=Date.now(); if(!incr) S.settings.lastFullSync=Date.now(); save();
+    // 5. synchro complète des données entre appareils (Google Drive)
+    if(S.settings.driveSync&&hasDrive()){ try{ down+=await driveSync() }catch(err){ if(err.message==='auth') throw err; console.warn(err) } }
     if(S.settings.driveBackup&&hasDrive()&&(!S.settings.lastDriveBackup||Date.now()-S.settings.lastDriveBackup>20*36e5)){
       try{await driveBackup()}catch(err){if(err.message==='auth')throw err;console.warn(err)}
     }
@@ -1970,6 +1977,83 @@ async function gfetch(url,opt={}){
   if(!r.ok){let msg='';try{msg=(await r.json()).error.message}catch(e){}const err=new Error('Google Drive : '+r.status+' '+msg);err.status=r.status;throw err}
   return r.status===204?null:r.json();
 }
+/* ---- Synchro des données entre appareils (fichier partagé sur Google Drive) ---- */
+const SYNC_NAME='Thêta - synchro.json';
+const SYNC_COLLS=['tasks','events','items','notes','reminders','habits','ideas','loans','folders'];
+const SYNC_PREFS=['classDays','classStart','classEnd','directionDays','dechargeKw','zone','dayStart','dayEnd','defaultDuration'];
+const SKIP_KEYS=new Set(['updatedAt','sync','syncErr','gUpdated']);
+const recKey=r=>JSON.stringify(r,(k,v)=>SKIP_KEYS.has(k)?undefined:v);
+const prefPick=()=>{const o={};SYNC_PREFS.forEach(k=>o[k]=S.settings[k]);o.loanPlaces=S.loanPlaces;return o};
+let SNAP=null;
+function snapAll(){SNAP={};for(const c of SYNC_COLLS)for(const r of (S[c]||[]))SNAP[c+':'+r.id]=recKey(r);SNAP._prefs=JSON.stringify(prefPick())}
+// Date chaque élément modifié et mémorise les suppressions (appelé à chaque enregistrement)
+function stamp(){
+  if(!SNAP){snapAll();return false}
+  const now=Date.now(), seen=new Set(); let ch=false; S.tomb=S.tomb||{};
+  for(const c of SYNC_COLLS)for(const r of (S[c]||[])){const k=c+':'+r.id, h=recKey(r); seen.add(k); if(SNAP[k]!==h){SNAP[k]=h;r.updatedAt=now;ch=true;delete S.tomb[k]}}
+  for(const k in SNAP) if(k!=='_prefs'&&!seen.has(k)){delete SNAP[k];S.tomb[k]=now;ch=true}
+  const ph=JSON.stringify(prefPick()); if(SNAP._prefs!==ph){SNAP._prefs=ph;S.settings.prefAt=now;ch=true}
+  for(const k in S.tomb) if(now-S.tomb[k]>90*864e5) delete S.tomb[k];
+  return ch;
+}
+const syncPayload=()=>{const data={};SYNC_COLLS.forEach(c=>data[c]=S[c]||[]);return {app:'theta-sync',v:1,at:Date.now(),data,tomb:S.tomb||{},prefs:prefPick(),prefAt:S.settings.prefAt||0}};
+// Fusionne le fichier distant : pour chaque élément, la version la plus récente gagne ; les suppressions sont appliquées
+function folderMap(R){
+  const L=S.folders||[], Lids=new Set(L.map(f=>f.id)), Rids=new Set(R.map(f=>f.id));
+  const path=(arr,f)=>{const p=[];let g=0;while(f&&g++<30){p.unshift(norm(f.name||''));f=arr.find(x=>x.id===f.parentId)}return p.join('/')};
+  const byPath=new Map(); L.filter(f=>!Rids.has(f.id)).forEach(f=>byPath.set(path(L,f),f.id));
+  const m={}; R.filter(f=>!Lids.has(f.id)).forEach(f=>{const lid=byPath.get(path(R,f)); if(lid) m[f.id]=lid});
+  return m;
+}
+function mergeRemote(rem){
+  let n=0; S.tomb=S.tomb||{}; if(!SNAP) snapAll();
+  if(rem.data&&rem.data.folders){
+    const m=folderMap(rem.data.folders);
+    if(Object.keys(m).length){
+      rem={...rem,data:{...rem.data}};
+      rem.data.folders=rem.data.folders.filter(f=>!m[f.id]).map(f=>m[f.parentId]?{...f,parentId:m[f.parentId]}:f);
+      rem.data.items=(rem.data.items||[]).map(i=>m[i.folderId]?{...i,folderId:m[i.folderId]}:i);
+    }
+  }
+  for(const[k,t]of Object.entries(rem.tomb||{})) if(!((S.tomb[k]||0)>=t)) S.tomb[k]=t;
+  for(const c of SYNC_COLLS){
+    const L=S[c]||[], R=(rem.data&&rem.data[c])||[], Lm=new Map(L.map(r=>[r.id,r])), Rm=new Map(R.map(r=>[r.id,r]));
+    const ids=[...L.map(r=>r.id),...R.filter(r=>!Lm.has(r.id)).map(r=>r.id)], res=[];
+    for(const id of ids){
+      const l=Lm.get(id), r=Rm.get(id), k=c+':'+id;
+      let w=l;
+      if(r&&(!l||(r.updatedAt||0)>(l.updatedAt||0))){ w={...r}; if(w.sync==='pending') w.sync=w.gid?'ok':null; delete w.syncErr; }
+      const ts=S.tomb[k];
+      if(ts&&ts>=(w.updatedAt||w.created||0)){ if(l) n++; delete SNAP[k]; continue; }
+      if(w!==l){ n++; SNAP[k]=recKey(w); }
+      res.push(w);
+    }
+    S[c]=res;
+  }
+  // Un même événement Google importé séparément sur chaque appareil : on n'en garde qu'un
+  const g=new Set(); S.events=S.events.filter(e=>{if(!e.gid)return true;const k=(e.calId||'')+'|'+e.gid;if(g.has(k))return false;g.add(k);return true});
+  if(rem.prefs&&(rem.prefAt||0)>(S.settings.prefAt||0)){ const{loanPlaces,...p}=rem.prefs; Object.assign(S.settings,p); if(loanPlaces) S.loanPlaces=loanPlaces; S.settings.prefAt=rem.prefAt; SNAP._prefs=JSON.stringify(prefPick()); n++; }
+  return n;
+}
+async function driveSync(){
+  let id=S.settings.syncFileId, rem=null;
+  if(!id){const q=new URLSearchParams({q:`name='${SYNC_NAME}' and trashed=false`,orderBy:'modifiedTime desc',fields:'files(id)'});const r=await gfetch(`${DRIVE}/files?${q}`);id=r.files&&r.files[0]&&r.files[0].id}
+  if(id){try{rem=await gfetch(`${DRIVE}/files/${enc(id)}?alt=media`)}catch(e){if(e.status===404)id=null;else throw e}}
+  const n=rem&&rem.app==='theta-sync'?mergeRemote(rem):0;
+  stamp(); const pay=syncPayload(), body=JSON.stringify(pay);
+  const same=rem&&rem.app==='theta-sync'&&JSON.stringify({...rem,at:0})===JSON.stringify({...pay,at:0});
+  if(!same){
+    if(id){ await gfetch(`${DRIVE_UP}/files/${enc(id)}?uploadType=media`,{method:'PATCH',headers:{'Content-Type':'application/json'},body}); }
+    else{
+      const bd='theta'+Date.now(), meta={name:SYNC_NAME,mimeType:'application/json',description:'Synchronisation de Thêta entre vos appareils. Ne pas modifier.'};
+      const mp=`--${bd}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n${JSON.stringify(meta)}\r\n--${bd}\r\nContent-Type: application/json\r\n\r\n${body}\r\n--${bd}--`;
+      const r=await gfetch(`${DRIVE_UP}/files?uploadType=multipart&fields=id`,{method:'POST',headers:{'Content-Type':'multipart/related; boundary='+bd},body:mp});
+      id=r.id;
+    }
+  }
+  S.settings.syncFileId=id; S.settings.lastDriveSync=Date.now(); save();
+  return n;
+}
 async function backupJSON(){const images=await IDB.all();return JSON.stringify({app:'theta',version:VERSION,date:new Date().toISOString(),state:S,images})}
 async function driveBackup(){
   if(!hasDrive()) throw new Error('Autorisez d\'abord l\'accès à Google Drive');
@@ -1995,7 +2079,7 @@ async function restoreData(data){
   if(!confirm(`Remplacer toutes les données actuelles par la sauvegarde du ${data.date?new Date(data.date).toLocaleString('fr-FR'):'?'} ?`)) return false;
   await IDB.clear(); for(const[k,v]of Object.entries(data.images||{})) await IDB.set(k,v);
   for(const k in imgCache) delete imgCache[k];
-  S=data.state; normalizeState(); hasCustomBg=!!(data.images||{}).bg_custom; $('#bg').dataset.k=''; save(); sub=null; render(); toast('📂 Sauvegarde restaurée');
+  S=data.state; normalizeState(); snapAll(); hasCustomBg=!!(data.images||{}).bg_custom; $('#bg').dataset.k=''; save(); sub=null; render(); toast('📂 Sauvegarde restaurée');
   return true;
 }
 
@@ -2331,7 +2415,7 @@ const C={
     if(f==='pushReminders'){ S.reminders.forEach(r=>{ if(r.gid||(S.settings.pushReminders&&!(r.recur==='none'&&r.done))) r.sync='pending'; }); save(); queueSync(); }
     if(f==='pushTasks'){ S.tasks.forEach(x=>{ if(x.date&&!x.noSync&&(S.settings.pushTasks||x.gid)) x.sync='pending'; }); save(); queueSync(); }
   },
-  calImport(el){ const c=S.settings.calendars.find(c=>c.id===el.dataset.id); if(!c) return; c.import=el.checked; if(!el.checked){ S.events=S.events.filter(e=>!(e.calId===c.id&&e.source==='google'&&e.sync!=='pending')); } save(); },
+  calImport(el){ const c=S.settings.calendars.find(c=>c.id===el.dataset.id); if(!c) return; c.import=el.checked; S.settings.lastFullSync=0; if(!el.checked){ S.events=S.events.filter(e=>!(e.calId===c.id&&e.source==='google'&&e.sync!=='pending')); } save(); },
 };
 function navUp(){
   if(sub){sub=null;render();return}
@@ -2447,7 +2531,7 @@ function shareSheet(text,ids,ttl){
 
 /* ================= Démarrage ================= */
 function init(){
-  load();
+  load(); snapAll();
   imgURL('bg_custom').then(u=>{hasCustomBg=!!u;if(S.settings.bg==='custom'&&!u){S.settings.bg='brume';save()}applyBg()});
   const p=new URLSearchParams(location.search).get('tab');
   view=TABS[p]?p:(S.settings.tabOrder[0]||'jour');
@@ -2467,6 +2551,17 @@ function init(){
   if(S.settings.clientId&&navigator.onLine) loadGIS().catch(()=>{});
   setInterval(checkReminders,30000); checkReminders();
   if(tokValid()&&S.settings.autoSync) setTimeout(()=>sync(false),1200);
+  // Vérifie les nouveautés toutes les 2 min 30 tant que Thêta est ouverte
+  setInterval(()=>{ if(document.visibilityState==='visible'&&navigator.onLine&&tokValid()&&S.settings.autoSync&&!sheetOpen) sync(false); },150000);
+  // Session Google expirée (ou presque) : on la renouvelle au toucher de la barre d'onglets, puis on synchronise
+  let renewAt=0;
+  document.addEventListener('pointerup',e=>{
+    if(!e.target.closest('#nav')) return;
+    const st=S.settings; if(!st.clientId||!st.autoSync||!st.lastSync||!navigator.onLine||syncing) return;
+    if(gTok&&gTok.exp-Date.now()>5*60e3) return;
+    if(Date.now()-renewAt<120e3) return; renewAt=Date.now();
+    getToken(true,true).then(()=>sync(false)).catch(()=>{});
+  },true);
   setTimeout(()=>loadHolidays(false),2000);
   document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(!sheetOpen&&document.activeElement.tagName!=='TEXTAREA') render(); checkReminders(); if(tokValid()&&S.settings.autoSync) sync(false); } });
   matchMedia('(prefers-color-scheme: light)').addEventListener('change',applyTheme);
