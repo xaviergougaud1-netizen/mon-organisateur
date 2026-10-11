@@ -232,6 +232,7 @@ body.vjour #main{touch-action:pan-y}
 .tl-h span{position:absolute;top:-7px;left:0;font-size:10.5px;font-weight:700;color:var(--muted);width:36px}
 .tl-free{position:absolute;left:44px;right:4px;z-index:1;border:1.5px dashed color-mix(in srgb,var(--a1) 45%,transparent);background:color-mix(in srgb,var(--a1) 7%,transparent);border-radius:10px;display:flex;flex-direction:column;align-items:flex-start;gap:4px;padding:3px 8px;overflow:hidden;cursor:pointer}
 .tl-fl{font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.tl-sug.burst{background:linear-gradient(135deg,#f59f00,#e8590c)}
 .tl-sug{border:0;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:650;background:linear-gradient(135deg,var(--a1),var(--a2));color:#fff;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tl-ev{position:absolute;border-radius:8px;padding:2px 6px;color:#fff;background:linear-gradient(135deg,var(--a1),var(--a2));overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.22);font-size:11.5px;line-height:1.2;cursor:pointer;z-index:2;border:1px solid rgba(255,255,255,.35)}
 .tl-ev b{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;overflow:hidden;font-weight:700;word-break:break-word}
@@ -248,6 +249,12 @@ body.vjour #main{touch-action:pan-y}
 .agcard{padding:10px;margin-bottom:8px}
 .crit{background:color-mix(in srgb,var(--a1) 8%,transparent);border-radius:14px;padding:4px 10px 8px;margin-bottom:8px}
 .crit-hint{margin:-2px 2px 6px}
+.overload{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px;margin-top:12px;border-color:#f5a623;background:color-mix(in srgb,#f5a623 12%,var(--card))}
+.bilan-g{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;text-align:center}
+.bilan-g b{display:block;font-size:20px}
+.bilan-g small{font-size:11px;opacity:.7}
+#propDates .chip small{opacity:.75;font-weight:500}
+#propDates{flex-wrap:wrap;overflow:visible;gap:6px}
 .crit .seg label{min-width:18%}
 .agday-h{display:flex;justify-content:space-between;align-items:center;padding:10px 6px 6px;font-size:13px;font-weight:750;opacity:.9}
 .agday-h span{font-size:12px;opacity:.6;font-weight:650}
@@ -417,7 +424,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.9.0';
+const VERSION='3.10.0';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -652,7 +659,22 @@ function renderNav(){
   $('#nav').innerHTML=S.settings.tabOrder.map(k=>`<button class="${cur===k?'on':''}" ${st(k)} data-a="tab" data-id="${k}"><span class="ic">${tabIcon(k)}</span>${TABS[k][1]}</button>`).join('')
     +`<button class="${cur==='plus'?'on':''}" ${st('plus')} data-a="plus"><span class="ic">⋯</span>Plus</button>`;
 }
+function weekReview(t){
+  const mon=addDays(t,-((parseD(t).getDay()+6)%7)), from=parseD(mon).getTime();
+  const done=S.tasks.filter(x=>x.done&&(x.doneAt||0)>=from), work=done.filter(isWork);
+  const mins=work.reduce((a,x)=>a+(+x.duration||30),0), hot=work.filter(x=>x.urg==='tres').length;
+  const left=S.tasks.filter(x=>!x.done&&isWork(x)&&['tres','urgent'].includes(effUrg(x))).length;
+  const carried=S.tasks.filter(x=>x.carried&&(!x.done||(x.doneAt||0)>=from)).length;
+  return sec('📊 Bilan de la semaine')+`<div class="card bilan"><div class="bilan-g"><div><b>${done.length}</b><small>tâches faites</small></div><div><b>${work.length}</b><small>💼 travail</small></div><div><b>${done.length-work.length}</b><small>🏠 perso</small></div><div><b>${fmtDur(mins)}</b><small>de travail</small></div></div>`
+    +`<div class="small muted" style="margin-top:8px">${hot?`🔥 ${plural(hot,'très urgente traitée','très urgentes traitées')}. `:''}${left?`Il reste ${plural(left,'tâche urgente','tâches urgentes')} pour la semaine prochaine.`:'Aucune urgence en attente : bon week-end !'}${carried?` · ↩️ ${plural(carried,'report','reports')} cette semaine`:''}</div></div>`;
+}
+function carryOver(){
+  const t=today(); let n=0;
+  S.tasks.forEach(x=>{ if(!x.done&&isWork(x)&&x.date&&x.date<t&&effUrg(x)==='tres'){ x.date=t; x.time=''; x.carried=(x.carried||0)+1; markPending(x,'task'); n++; } });
+  return n;
+}
 function render(){
+  if(S.settings.lastCarry!==today()){ const n=carryOver(); S.settings.lastCarry=today(); save(); if(n) setTimeout(()=>toast('↩️ '+plural(n,'tâche très urgente reportée','tâches très urgentes reportées')+' à aujourd\'hui'),700); }
   applyTheme(); renderNav();
   const r=(sub?SUBS[sub]:VIEWS[view])();
   $('#title').textContent=r.title;
@@ -720,10 +742,17 @@ const URG={tres:['🔥','Très urgent'],urgent:['⚡','Urgent'],non:['🌿','Pas
 const DURB=[[5,'< 5 min'],[15,'5–15 min'],[30,'15–30 min'],[60,'30 min–1 h'],[90,'> 1 h']];
 const durBucket=m=>{m=+m||30;return m<=5?5:m<=15?15:m<=30?30:m<=60?60:90};
 const isWork=x=>x&&x.cat==='travail';
+// Urgence effective : la date limite fait monter l'urgence (≤ 5 jours : urgent ; veille ou jour J : très urgent)
+const daysTo=d=>Math.round((parseD(d)-parseD(today()))/864e5);
+function effUrg(x){
+  let u=x.urg||'non';
+  if(x.due){const n=daysTo(x.due); if(n<=1) u='tres'; else if(n<=5&&u==='non') u='urgent';}
+  return u;
+}
 // Score de priorité : plus il est petit, plus la tâche passe tôt
 function taskScore(x){
   if(!isWork(x)) return {haute:25,moyenne:45,basse:55}[x.priority||'moyenne']??45;
-  const u={tres:0,urgent:20,non:40}[x.urg||'non'], i=x.imp?0:10, q=(+x.duration||30)<=5?-3:0;
+  const u={tres:0,urgent:20,non:40}[effUrg(x)], i=x.imp?0:10, q=(+x.duration||30)<=5?-3:0;
   return u+i+q;
 }
 const byScore=(a,b)=>taskScore(a)-taskScore(b)||(a.date||a.month||'9999').localeCompare(b.date||b.month||'9999')||byTime(a,b);
@@ -742,7 +771,8 @@ function dueOn(x,d){
   if(x.date===d) return true;
   if(x.date||x.month||!isWork(x)||d!==today()) return false;
   const wd=parseD(d).getDay();
-  return x.urg==='tres'||(x.urg==='urgent'&&(wd===3||wd===5));
+  const u=effUrg(x);
+  return u==='tres'||(u==='urgent'&&(wd===3||wd===5));
 }
 const RECUR_L={day:'chaque jour',weekdays:'lun → ven',week:'chaque semaine',biweek:'toutes les 2 semaines',month:'chaque mois',lastwork:'dernier jour ouvré',year:'chaque année'};
 function nextRecur(d,r){
@@ -752,6 +782,34 @@ function nextRecur(d,r){
     let n=addDays(x,1);while([0,6].includes(parseD(n).getDay()))n=addDays(n,1);return n};
   let n=step(d); let g=0; while(n<today()&&g++<400) n=step(n); return n;
 }
+// Créneaux libres d'un jour (hors événements, tâches à heure fixe et classe)
+function freeSlots(d,start,endD){
+  const st=S.settings; endD=endD??toMin(st.dayEnd||'20:00');
+  if(start==null){start=toMin(st.dayStart||'08:00'); if(d===today()){const n=new Date();start=Math.max(start,Math.ceil((n.getHours()*60+n.getMinutes())/15)*15)}}
+  const busy=[...eventsOn(d).filter(e=>e.start&&e.date===d).map(e=>[toMin(e.start),e.end&&e.end>e.start?toMin(e.end):toMin(e.start)+60]),
+    ...S.tasks.filter(x=>x.date===d&&x.time&&!x.done).map(x=>[toMin(x.time),toMin(x.time)+(+x.duration||30)]),
+    ...classB(d,'c').map(b=>[b.s,b.e])].sort((a,b)=>a[0]-b[0]);
+  const free=[]; let cur=start;
+  for(const[a,b]of busy){ if(a>cur) free.push([cur,Math.min(a,endD)]); cur=Math.max(cur,b); if(cur>=endD) break; }
+  if(cur<endD) free.push([cur,endD]);
+  return free;
+}
+// Minutes libres restantes un jour donné, déduction faite des tâches sans heure déjà prévues ce jour-là
+function freeMin(d){
+  const tot=freeSlots(d).reduce((a,[x,y])=>a+Math.max(0,y-x),0);
+  const planned=S.tasks.filter(x=>!x.done&&!x.time&&x.date===d).reduce((a,x)=>a+(+x.duration||30),0);
+  return Math.max(0,tot-planned);
+}
+// Dates proposées pour une tâche travail selon son urgence
+function proposeDates(urg,dur){
+  const t=today(), out=[], add=(d,why)=>{if(d&&!out.some(o=>o[0]===d))out.push([d,why])};
+  const nextWd=wd=>{for(let i=0;i<14;i++){const d=addDays(t,i);if(parseD(d).getDay()===wd&&(i>0||freeMin(d)>=dur))return d}};
+  if(urg==='tres') add(freeMin(t)>=dur?t:addDays(t,1),'');
+  else { add(nextWd(3),''); add(nextWd(5),''); }
+  if(urg!=='tres') for(let i=0;i<=7;i++){const d=addDays(t,i); if(parseD(d).getDay()===2&&hasDecharge(d)){add(d,'décharge');break}}
+  return out.sort((a,b)=>a[0].localeCompare(b[0]));
+}
+const dayShort=d=>{const D=parseD(d);return d===today()?'Aujourd\'hui':d===addDays(today(),1)?'Demain':cap(JOURS[D.getDay()].slice(0,3))+'. '+D.getDate()};
 // Propose un horaire pour les tâches sans heure, dans les créneaux libres du jour d
 function suggest(d){
   const t=today(); d=d||t; if(d<t) return [];
@@ -759,12 +817,7 @@ function suggest(d){
   let start=toMin(st.dayStart||'08:00');
   if(d===t){const n=new Date();start=Math.max(start,Math.ceil((n.getHours()*60+n.getMinutes())/15)*15)}
   if(start>=endD) return [];
-  const busy=[...eventsOn(d).filter(e=>e.start&&e.date===d).map(e=>[toMin(e.start),e.end&&e.end>e.start?toMin(e.end):toMin(e.start)+60]),
-    ...S.tasks.filter(x=>x.date===d&&x.time&&!x.done).map(x=>[toMin(x.time),toMin(x.time)+(+x.duration||30)]),
-    ...classB(d,'c').map(b=>[b.s,b.e])].sort((a,b)=>a[0]-b[0]);
-  const free=[]; let cur=start;
-  for(const[a,b]of busy){ if(a>cur) free.push([cur,Math.min(a,endD)]); cur=Math.max(cur,b); if(cur>=endD) break; }
-  if(cur<endD) free.push([cur,endD]);
+  const free=freeSlots(d,start,endD);
   // Jour d'école (classe ou direction) : les heures d'école vont au travail, le perso passe en dehors
   const sch=schoolDay(d)?[toMin(st.classStart||'09:00'),toMin(st.classEnd||'16:45')]:null;
   const segs=sch?free.flatMap(([a,b])=>{const c=[a,...sch.filter(v=>v>a&&v<b),b],r=[];for(let i=0;i<c.length-1;i++)r.push([c[i],c[i+1]]);return r}):free;
@@ -776,17 +829,27 @@ function suggest(d){
     if(x.month&&x.month>mk) return false;
     if(x.date) return true;                      // prévue ce jour-là ou en retard
     if(!isWork(x)) return true;
-    if(x.urg==='tres') return d===t;             // très urgent : dans la journée
-    if(x.urg==='urgent') return wedFri;          // urgent : mercredi ou vendredi
+    const u=effUrg(x);
+    if(u==='tres') return d===t;                 // très urgent : dans la journée
+    if(u==='urgent') return wedFri||(!!x.due&&d<=x.due&&daysTo(x.due)<=2); // urgent : mercredi ou vendredi (ou avant la date limite)
     return true;                                  // pas urgent : dès qu'un créneau se libère
   };
-  const out=[];
-  for(const c of S.tasks.filter(ok).sort(byScore)){
+  const out=[], cands=S.tasks.filter(ok).sort(byScore), isQ=c=>(+c.duration||30)<=5, quick=cands.filter(isQ);
+  let burstDone=quick.length<2;
+  for(const c of cands){
+    if(quick.length>=2&&isQ(c)){
+      // Rafale : toutes les petites tâches ensemble, 5 min chacune, dans un même créneau
+      if(burstDone) continue; burstDone=true;
+      const Q=quick.slice(0,6), need=Q.length*5, fitQ=sl=>sl[1]-sl[0]>=need;
+      const slot=Q.some(q=>!isWork(q))?segs.find(sl=>fitQ(sl)&&!inSch(sl)):(segs.find(sl=>fitQ(sl)&&inSch(sl))||segs.find(fitQ));
+      if(slot){ Q.forEach((q,i)=>out.push({task:q,start:slot[0]+i*5,end:slot[0]+i*5+5,burst:Q.length})); slot[0]+=need; }
+      continue;
+    }
     const dur=Math.max(5,+c.duration||30), fits=sl=>sl[1]-sl[0]>=dur;
     const slot=isWork(c)?(segs.find(sl=>fits(sl)&&inSch(sl))||segs.find(fits)):segs.find(sl=>fits(sl)&&!inSch(sl));
     if(!slot) continue;
     out.push({task:c,start:slot[0],end:slot[0]+dur}); slot[0]+=dur;
-    if(out.length>=8) break;
+    if(out.filter(o=>!o.burst).length>=8) break;
   }
   return out.sort((a,b)=>a.start-b.start);
 }
@@ -802,7 +865,7 @@ function taskRow(x){
   if(x.date) m.push(`<span class="tag ${late?'late':''}">📅 ${fmtDate(x.date)}</span>`);
   if(x.month) m.push(`<span class="tag ${late?'late':''}">🗓️ ${fmtMonth(x.month)}</span>`);
   if(x.time) m.push(`<span class="tag">🕐 ${x.time}</span>`);
-  if(isWork(x)){ m.push(`<span class="tag ${x.urg==='tres'?'late':''}">${URG[x.urg||'non'][0]} ${URG[x.urg||'non'][1]}</span>`); if(x.imp) m.push('<span class="tag">⭐ Important</span>'); m.push(`<span class="tag">⏱ ${(DURB.find(b=>b[0]===durBucket(x.duration))||[])[1]}</span>`); }
+  if(isWork(x)){ const u=effUrg(x); m.push(`<span class="tag ${u==='tres'?'late':''}">${URG[u][0]} ${URG[u][1]}</span>`); if(x.due) m.push(`<span class="tag ${daysTo(x.due)<=1?'late':''}">⏰ limite ${fmtDate(x.due)}</span>`); if(x.carried) m.push('<span class="tag sync">↩️ reportée</span>'); if(x.imp) m.push('<span class="tag">⭐ Important</span>'); m.push(`<span class="tag">⏱ ${(DURB.find(b=>b[0]===durBucket(x.duration))||[])[1]}</span>`); }
   else if(x.duration) m.push(`<span class="tag">⏱ ${fmtDur(x.duration)}</span>`);
   m.unshift(`<span class="tag">${isWork(x)?'💼':'🏠'}</span>`);
   if(x.recur&&x.recur!=='none') m.push(`<span class="tag">🔁 ${RECUR_L[x.recur]||''}</span>`);
@@ -812,7 +875,7 @@ function taskRow(x){
 }
 function taskRowLite(x){
   const sy=syncTag(x);
-  return `<div class="item ${x.done?'done':''} ${(x.steps&&x.steps.length)||subAddFor==='task:'+x.id?'top':''}"><button class="chk ${x.done?'on':''}" data-a="toggleTask" data-id="${x.id}" aria-label="Terminer"></button><div class="grow" data-a="editTask" data-id="${x.id}"><div class="ttl">${esc(x.title)}</div>${sy?`<div class="meta">${sy}</div>`:''}${subList(x,'task')}</div>${x.done?'':subBtn(x,'task')}<span class="prio p-${x.priority}"></span></div>`;
+  return `<div class="item ${x.done?'done':''} ${(x.steps&&x.steps.length)||subAddFor==='task:'+x.id?'top':''}"><button class="chk ${x.done?'on':''}" data-a="toggleTask" data-id="${x.id}" aria-label="Terminer"></button><div class="grow" data-a="editTask" data-id="${x.id}"><div class="ttl">${x.carried&&!x.done?'<span title="Reportée">↩️ </span>':''}${esc(x.title)}</div>${sy?`<div class="meta">${sy}</div>`:''}${subList(x,'task')}</div>${x.done?'':subBtn(x,'task')}<span class="prio p-${x.priority}"></span></div>`;
 }
 // Un seul cadre pour un ensemble de tâches (sans sous-cadres)
 const taskCard=(L,extra='')=>`<div class="card agcard">${extra}<div class="list">${L.map(taskRowLite).join('')}</div></div>`;
@@ -854,8 +917,8 @@ function dayTimeline(t,isToday,sug){
   const fr=free.map(([a,b])=>[isToday?Math.max(a,Math.ceil(nowM/15)*15):a,b]).filter(([a,b])=>b-a>=30);
   let h='';
   for(let m=H0;m<=H1;m+=60) h+=`<div class="tl-h" style="top:${y(m)}px"><span>${m>=1440?'24':pad(m/60)}h</span></div>`;
-  for(const[a,b]of fr){const sg=sug.find(x=>x.start>=a&&x.start<b);
-    h+=`<div class="tl-free" data-a="slotNew" data-d="${t}" data-v="${fromMin(a)}" style="top:${y(a)+1}px;height:${(b-a)*PX-2}px"><span class="tl-fl">Libre · ${fromMin(a)}–${fromMin(b===1440?1439:b)} · <b>${fmtDur(b-a)}</b></span>${sg&&(b-a)*PX>=44?`<button class="tl-sug" data-a="plan" data-d="${t}" data-id="${sg.task.id}" data-v="${fromMin(sg.start)}">💡 Caser « ${esc(sg.task.title)} »</button>`:''}</div>`}
+  for(const[a,b]of fr){const inS=sug.filter(x=>x.start>=a&&x.start<b), sg=inS[0], room=Math.max(1,Math.floor(((b-a)*PX-20)/24)), burst=inS.find(x=>x.burst), singles=inS.filter(x=>!x.burst).slice(0,Math.max(1,room-(burst?1:0)));
+    h+=`<div class="tl-free" data-a="slotNew" data-d="${t}" data-v="${fromMin(a)}" style="top:${y(a)+1}px;height:${(b-a)*PX-2}px"><span class="tl-fl">Libre · ${fromMin(a)}–${fromMin(b===1440?1439:b)} · <b>${fmtDur(b-a)}</b></span>${sg&&(b-a)*PX>=44?singles.map(x=>`<button class="tl-sug" data-a="plan" data-d="${t}" data-id="${x.task.id}" data-v="${fromMin(x.start)}">💡 ${fromMin(x.start)} « ${esc(x.task.title)} »</button>`).join('')+(burst?`<button class="tl-sug burst" data-a="planBurst" data-d="${t}">⚡ ${fromMin(burst.start)} Rafale · ${plural(burst.burst,'petite tâche','petites tâches')} (${burst.burst*5} min)</button>`:''):''}</div>`}
   for(const b of B){
     if(b.k==='class'){h+=`<div class="tl-ev cls" style="top:${y(b.s)}px;height:${Math.max(20,(b.e-b.s)*PX-2)}px;left:calc(44px + (100% - 48px)*${b.col}/${b.n});width:calc((100% - 48px)/${b.n} - 3px)"><b>🏫 En classe</b><small>${fromMin(b.s)}–${fromMin(b.e)}</small></div>`;continue}
     const PP=PALETTES[S.settings.palette], pc=PP?palPairs(PP)[B.indexOf(b)%palPairs(PP).length]:null;
@@ -888,6 +951,11 @@ VIEWS.jour=()=>{
   const nrev=S.notes.filter(n=>n.status==='review').length;
   if(nrev) html+=sec('À ranger',nrev)+reviewCards();
   if(isToday&&hasData&&!S.settings.driveFileId&&(!S.settings.lastBackup||Date.now()-S.settings.lastBackup>14*864e5)) html+=`<button class="banner" data-a="export">💾 Pensez à sauvegarder vos données<span class="grow"></span>Exporter</button>`;
+  if(isToday){
+    const T3=open.filter(x=>isWork(x)&&effUrg(x)==='tres'&&!x.time), need=T3.reduce((a,x)=>a+(+x.duration||30),0), fr=freeSlots(t).reduce((a,[x,y])=>a+Math.max(0,y-x),0);
+    if(T3.length&&need>fr&&h*60<toMin(S.settings.dayEnd||'20:00')) html+=`<div class="card overload"><div><b>⚠️ Journée chargée</b><div class="small">${fmtDur(need)} de très urgent pour ${fr?fmtDur(fr):'aucun temps'} libre${fr>1?'s':''} aujourd'hui.</div></div><button class="btn sm" data-a="reportSurplus">Reporter le surplus à demain</button></div>`;
+  }
+  if(isToday&&D.getDay()===5) html+=weekReview(t);
   if(open.length) html+=sec(isToday?'Tâches du jour':'Tâches',open.length)+taskCard(open);
   if(late.length||lateR.length) html+=sec('En retard',late.length+lateR.length)+`<div class="card agcard"><div class="list">${late.map(taskRowLite).join('')}${lateR.map(remRow).join('')}</div></div>`;
   html+=sec('Ma journée')+dayTimeline(t,isToday,sug);
@@ -1250,6 +1318,14 @@ function removeUndo(key,obj,label){
 }
 
 window.thetaCat=el=>{const c=el.querySelector('input:checked');if(!c)return;const w=c.value==='travail';$('#wWork').style.display=w?'':'none';$('#wPerso').style.display=w?'none':''};
+window.thetaProp=()=>{
+  const box=$('#propDates'); if(!box) return;
+  const f=$('#shForm'), val=n=>{const c=f.querySelector(`[name=${n}]:checked`);return c?c.value:''};
+  const urg=val('urg')||'non', dur=+val('dur')||30, due=(f.querySelector('[name=due]')||{}).value;
+  const cur=val('when')==='day'?(f.querySelector('[name=date]')||{}).value:'';
+  let L=proposeDates(urg,dur); if(due) L=L.filter(([d])=>d<=due);
+  box.innerHTML=L.length?L.map(([d,why])=>{const fm=freeMin(d);return `<button type="button" class="chip ${d===cur?'on':''}" data-a="pickDate" data-id="${d}">${dayShort(d)}${why?' · '+why:''}<small> · ${fm?fmtDur(fm)+' libre'+(fm>1?'s':''):'complet'}</small></button>`}).join(''):'<span class="small muted">Aucune date avant la limite : mets-la aujourd\'hui.</span>';
+};
 window.thetaWhen=el=>{const c=el.querySelector('input:checked');if(!c)return;const v=c.value;$('#wDay').style.display=v==='day'?'':'none';$('#wMonth').style.display=v==='month'?'':'none'};
 function taskSheet(x,preset){
   const isNew=!x, pr=preset||{};
@@ -1260,11 +1336,13 @@ function taskSheet(x,preset){
   openSheet(isNew?'Nouvelle tâche':'Modifier la tâche',
     fld('Intitulé',inp('title',v.title,'text','autofocus placeholder="Facultatif si photo"'))+
     `<div onchange="thetaCat(this)">${fld('Catégorie',seg('cat',[['travail','💼 Travail'],['perso','🏠 Perso']],cat))}</div>`+
-    `<div id="wWork" class="crit" style="${cat==='travail'?'':'display:none'}">`+
+    `<div id="wWork" class="crit" onchange="thetaProp()" style="${cat==='travail'?'':'display:none'}">`+
       fld('Urgence',seg('urg',Object.entries(URG).map(([k,[i,l]])=>[k,i+' '+l]),v.urg||'non'))+
       `<div class="small muted crit-hint">🔥 dans la journée · ⚡ un mercredi ou un vendredi · 🌿 dès qu'un créneau se libère</div>`+
       fld('Importance',seg('imp',[['1','⭐ Important'],['0','Pas important']],v.imp?'1':'0'))+
       fld('Temps nécessaire',seg('dur',[['5','< 5 min'],['15','5–15'],['30','15–30'],['60','½–1 h'],['90','> 1 h']],String(durBucket(v.duration))))+
+      fld('⏰ Date limite (facultatif)',inp('due',v.due||'','date'))+
+      `<div class="fld"><span>📅 Quand la faire ?</span><div id="propDates" class="chips"></div></div>`+
     `</div>`+
     fld('Échéance',`<div onchange="thetaWhen(this)">${seg('when',[['day','📅 Un jour'],['month','🗓️ Un mois'],['none','Sans date']],when)}</div>`)+
     `<div class="row2" id="wDay" style="${when==='day'?'':'display:none'}">${fld('Date',inp('date',v.date||today(),'date'))}${fld('Heure (optionnel)',inp('time',v.time,'time'))}</div>`+
@@ -1286,14 +1364,14 @@ function taskSheet(x,preset){
       commitImgs(o);
       const work=fd.cat==='travail';
       Object.assign(o,{title,date,time:w==='day'?fd.time:'',month:w==='month'?(fd.month||curMonth()):null,notes:fd.notes.trim(),recur,steps:readSteps(),cat:work?'travail':'perso'});
-      if(work) Object.assign(o,{urg:fd.urg||'non',imp:fd.imp==='1',duration:+fd.dur||30,priority:{tres:'haute',urgent:'moyenne',non:'basse'}[fd.urg||'non']});
+      if(work) Object.assign(o,{urg:fd.urg||'non',imp:fd.imp==='1',duration:+fd.dur||30,due:fd.due||null,priority:{tres:'haute',urgent:'moyenne',non:'basse'}[fd.urg||'non']});
       else Object.assign(o,{priority:fd.priority,duration:+fd.duration});
       S.settings.lastCat=o.cat;
       if(x&&x.noSync&&!fd.noSync) o.noSync=false;
       if(isNew) S.tasks.push(o);
       markPending(o,'task'); save(); render(); toast(isNew?'✅ Tâche ajoutée':'Tâche modifiée');
     },onDelete:isNew?null:()=>{closeSheet();removeUndo('tasks',x,'Tâche')}});
-  refreshImgBox();
+  refreshImgBox(); thetaProp();
 }
 function eventSheet(e,preset){
   const isNew=!e;
@@ -1470,7 +1548,7 @@ function parseSeg(raw){
   const cuts=[], T=today();
   const take=re=>{const m=re.exec(n);if(!m)return null;const a=m.index,b=a+m[0].length;cuts.push([a,b]);n=n.slice(0,a)+' '.repeat(b-a)+n.slice(b);
     m.orig=i=>m.indices&&m.indices[i]?t.slice(m.indices[i][0],m.indices[i][1]):m[i];return m};
-  let month=null,days=null,type=null,date=null,time=null,end=null,dur=null,recur='none',prio='moyenne',hint=null,folderId=null,person='',libType=null,title=null,conf=.9,m;
+  let urg=null,imp=null,cat=null,month=null,days=null,type=null,date=null,time=null,end=null,dur=null,recur='none',prio='moyenne',hint=null,folderId=null,person='',libType=null,title=null,conf=.9,m;
   const hm=(h,mi)=>{h=+h;mi=+(mi||0);return h<24&&mi<60?pad(h)+':'+pad(mi):null};
   // Rappel explicite
   if(take(/^\s*(?:rappelle[- ]?moi\s*(?:de |d'|qu'|que )?|rappel\s*:?\s*|(?:il )?faut (?:que je )?penser a |pense[rz]? a |n'oublie pas (?:de |d')?|ne pas oublier (?:de |d')?)/)) type='reminder';
@@ -1516,6 +1594,23 @@ function parseSeg(raw){
   else if(m=take(/\b(?:a |vers |des |pour )?(\d{1,2}) ?(?:h|heures?|:) ?(\d{2})?\b/)) time=hm(m[1],m[2]);
   else if(take(/\b(?:a |vers )?midi\b/)) time='12:00';
   else if(take(/\b(?:a |vers )?minuit\b/)) time='23:59';
+  // Critères des tâches travail
+  if(take(/\b(?:c'est )?(?:tres|super|hyper|extremement) urgente?\b/)) urg='tres';
+  else if(take(/\b(?:c'est )?pas (?:tres )?urgente?\b/)) urg='non';
+  else if(take(/\b(?:c'est )?urgente?\b/)) urg='urgent';
+  if(take(/\b(?:c'est )?pas (?:tres )?importante?\b/)) imp=false;
+  else if(take(/\b(?:c'est )?(?:tres )?importante?\b/)) imp=true;
+  if(!dur){
+    if(take(/\b(?:vite fait|rapidement|en deux secondes|deux minutes|2 minutes|cinq minutes)\b/)) dur=5;
+    else if(take(/\bun quart d'heure\b/)) dur=15;
+    else if(take(/\bune demi[- ]heure\b/)) dur=30;
+    else if(take(/\b(?:ca (?:va )?(?:me )?prend(?:re)? |prendra )?une heure\b/)) dur=60;
+    else if(take(/\b(?:deux|plusieurs) heures\b/)) dur=120;
+  }
+  if(take(/\b(?:c'est )?(?:perso|personnel|pour la maison|a la maison)\b/)) cat='perso';
+  else if(take(/\b(?:pour le (?:boulot|travail)|c'est pro|professionnel)\b/)||/\b(?:ecole|classe|eleves?|direction|directeur|conseil|inspect\w*|parents? d'eleves?|collegues?|cycle|reunion|mairie|pedago\w*|cahiers?|copies|registre|projet d'ecole|equipe|aesh|ppms|cantine|periscolaire|academie|circonscription|cpc|ien)\b/.test(n)) cat='travail';
+  else if(urg||imp!==null) cat='travail';
+  if(urg) prio={tres:'haute',urgent:'moyenne',non:'basse'}[urg];
   // Priorité
   if(take(/\b(?:c'est )?(?:pas urgent|quand j'ai le temps|si possible|un de ces jours)\b/)) prio='basse';
   else if(take(/\b(?:c'est |tres )?(?:urgent|urgente|important|importante|prioritaire|asap|en priorite)\b/)) prio='haute';
@@ -1581,12 +1676,12 @@ function parseSeg(raw){
   if(!title){const f=folderId&&S.folders.find(x=>x.id===folderId);title=f?f.name:cap(raw.trim())}
   title=cap(title);
   if(type==='todo'&&!folderId) folderId=null;
-  return {id:uid(),type,title,date,time,end,month,days,place:'',duration:dur||S.settings.defaultDuration,priority:prio,recur,folderId,person,libType:libType||'livre',conf,raw,status:'pending'};
+  return {id:uid(),type,title,date,time,end,month,days,place:'',duration:dur||S.settings.defaultDuration,priority:prio,recur,folderId,person,cat,urg,imp,libType:libType||'livre',conf,raw,status:'pending'};
 }
 function applyProp(p){
   const now=Date.now(); let label=`${PT[p.type][0]} ${PT[p.type][1]} : ${p.title}`;
   switch(p.type){
-    case 'task':{const rc=RTASK.some(x=>x[0]===p.recur)?p.recur:'none';const o={id:uid(),title:p.title,month:p.month&&!p.date?p.month:null,date:p.month&&!p.date?'':(p.date||(rc!=='none'?today():'')),time:p.time||'',priority:p.priority||'moyenne',duration:+p.duration||S.settings.defaultDuration,done:false,created:now,notes:'',recur:rc};S.tasks.push(o);markPending(o,'task');break}
+    case 'task':{const rc=RTASK.some(x=>x[0]===p.recur)?p.recur:'none';const o={id:uid(),title:p.title,month:p.month&&!p.date?p.month:null,date:p.month&&!p.date?'':(p.date||(rc!=='none'?today():'')),time:p.time||'',priority:p.priority||'moyenne',duration:+p.duration||S.settings.defaultDuration,done:false,created:now,notes:'',recur:rc};if(p.cat==='travail'){Object.assign(o,{cat:'travail',urg:p.urg||'non',imp:!!p.imp,duration:durBucket(o.duration)});o.priority={tres:'haute',urgent:'moyenne',non:'basse'}[o.urg]}else o.cat='perso';S.tasks.push(o);markPending(o,'task');break}
     case 'event':{const cal=S.settings.targetCal,c=S.settings.calendars.find(c=>c.id===cal);const st=p.time||'';const o={id:uid(),title:p.title,date:p.date||today(),endDate:null,start:st,end:st?(p.end&&p.end>st?p.end:fromMin(Math.min(toMin(st)+60,1439))):'',place:p.place||'',notes:'',calId:cal,calName:c?c.name:'',source:'local',created:now};S.events.push(o);markPending(o,'event');break}
     case 'reminder':{const o={id:uid(),title:p.title,date:p.date||today(),time:p.time||'',recur:RREM.some(x=>x[0]===p.recur)?p.recur:'none',days:p.days||null,done:false,created:now};S.reminders.push(o);markPending(o,'rem');break}
     case 'todo':{S.items.push({id:uid(),folderId:p.folderId||null,text:p.title,done:false,images:[],created:now});const path=folderPath(p.folderId).map(f=>f.name).join(' › ');label+=' → '+(path||'Accueil');break}
@@ -2071,6 +2166,14 @@ const A={
   },
   taskFilter(id){ taskFilter=id; render(); },
   taskCat(id){ taskCat=id; render(); },
+  planBurst(id,el){ const d=el.dataset.d||today(), L=suggest(d).filter(s=>s.burst); L.forEach(s=>{s.task.date=d;s.task.time=fromMin(s.start);markPending(s.task,'task')}); save(); render(); toast('⚡ Rafale planifiée à '+(L[0]?fromMin(L[0].start):'')); },
+  reportSurplus(){
+    const t=today(); let fr=freeSlots(t).reduce((a,[x,y])=>a+Math.max(0,y-x),0), keep=0; const moved=[];
+    S.tasks.filter(x=>dueOn(x,t)&&isWork(x)&&effUrg(x)==='tres'&&!x.time).sort(byScore).forEach(x=>{const d=+x.duration||30; if(keep+d<=fr) keep+=d; else moved.push(x)});
+    moved.forEach(x=>{x.date=addDays(t,1);markPending(x,'task')}); save(); render();
+    toast('↪️ '+plural(moved.length,'tâche reportée','tâches reportées')+' à demain','Annuler',()=>{moved.forEach(x=>{x.date=t;markPending(x,'task')});save();render()});
+  },
+  pickDate(id){ const f=$('#shForm'); if(!f) return; const r=f.querySelector('[name=when][value=day]'); r.checked=true; thetaWhen(r.closest('div[onchange]')); f.querySelector('[name=date]').value=id; thetaProp(); },
   toggleDay(id){ const[k,n]=id.split(':'), key=k==='class'?'classDays':'directionDays', v=+n, arr=[...(S.settings[key]||[])], i=arr.indexOf(v); if(i<0)arr.push(v); else arr.splice(i,1); S.settings[key]=arr.sort(); save(); render(); },
   plan(id,el){ const x=S.tasks.find(x=>x.id===id); if(!x) return; x.date=el.dataset.d||today(); x.time=el.dataset.v; markPending(x,'task'); save(); render(); toast('🗓️ Planifiée à '+x.time); },
   planAll(id,el){ const d=(el&&el.dataset.d)||today(), sg=suggest(d); sg.forEach(s=>{s.task.date=d;s.task.time=fromMin(s.start);markPending(s.task,'task')}); save(); render(); toast('✨ '+plural(sg.length,'tâche planifiée','tâches planifiées')); },
