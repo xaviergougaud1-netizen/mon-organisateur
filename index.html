@@ -436,7 +436,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.12.0';
+const VERSION='3.12.1';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -705,7 +705,7 @@ function render(){
 /* ---------- Jour ---------- */
 function eventsOn(d){return S.events.filter(e=>e.date===d||(e.endDate&&e.date<d&&e.endDate>=d)).sort(byTime)}
 const BYDAY=['SU','MO','TU','WE','TH','FR','SA'];
-const RREM=[['none','Une seule fois'],['day','Chaque jour'],['weekdays','Du lundi au vendredi'],['week','Certains jours de la semaine'],['biweek','Toutes les 2 semaines'],['month','Chaque mois (même date)'],['lastwork','Dernier jour ouvré du mois'],['year','Chaque année']];
+const RREM=[['none','Une seule fois'],['day','Chaque jour'],['weekdays','Du lundi au vendredi'],['weekly','Toutes les semaines'],['week','Certains jours de la semaine'],['biweek','Toutes les 2 semaines'],['month','Chaque mois (même date)'],['lastwork','Dernier jour ouvré du mois'],['year','Chaque année']];
 const RTASK=[['none','Aucune'],['day','Chaque jour'],['weekdays','Lun → ven'],['week','Chaque semaine'],['biweek','Toutes les 2 semaines'],['month','Chaque mois'],['lastwork','Dernier jour ouvré du mois'],['year','Chaque année']];
 function lastWorkDay(y,m){const d=new Date(y,m+1,0);while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()-1);return iso(d)}
 function remOccurs(r,d){
@@ -715,6 +715,7 @@ function remOccurs(r,d){
   switch(rc){
     case 'day': return true;
     case 'weekdays': return D.getDay()!==0&&D.getDay()!==6;
+    case 'weekly': return D.getDay()===S0.getDay();
     case 'week': return (r.days&&r.days.length?r.days:[S0.getDay()]).includes(D.getDay());
     case 'biweek': return Math.round((D-S0)/864e5)%14===0;
     case 'month': return D.getDate()===Math.min(S0.getDate(),new Date(D.getFullYear(),D.getMonth()+1,0).getDate());
@@ -728,6 +729,7 @@ function recurLabel(r){
   const S0=parseD(r.date||today());
   switch(r.recur){
     case 'day':return 'Chaque jour'; case 'weekdays':return 'Du lundi au vendredi';
+    case 'weekly':return 'Toutes les semaines, le '+JOURS[S0.getDay()];
     case 'week':return 'Chaque '+(r.days&&r.days.length?r.days:[S0.getDay()]).slice().sort((a,b)=>((a+6)%7)-((b+6)%7)).map(i=>JOURS[i]).join(', ');
     case 'biweek':return 'Un '+JOURS[S0.getDay()]+' sur deux';
     case 'month':return 'Le '+S0.getDate()+' de chaque mois';
@@ -740,6 +742,7 @@ function rrule(r){
   const S0=parseD(firstOcc(r)||today());
   switch(r.recur){
     case 'day':return 'RRULE:FREQ=DAILY'; case 'weekdays':return 'RRULE:FREQ=WEEKLY;BYDAY=MO,TU,WE,TH,FR';
+    case 'weekly':return 'RRULE:FREQ=WEEKLY;BYDAY='+BYDAY[S0.getDay()];
     case 'week':return 'RRULE:FREQ=WEEKLY;BYDAY='+(r.days&&r.days.length?r.days:[S0.getDay()]).map(i=>BYDAY[i]).join(',');
     case 'biweek':return 'RRULE:FREQ=WEEKLY;INTERVAL=2'; case 'month':return 'RRULE:FREQ=MONTHLY';
     case 'lastwork':return 'RRULE:FREQ=MONTHLY;BYDAY=MO,TU,WE,TH,FR;BYSETPOS=-1'; case 'year':return 'RRULE:FREQ=YEARLY';
@@ -793,9 +796,9 @@ function dueOn(x,d){
   const u=effUrg(x);
   return u==='tres'||(u==='urgent'&&(wd===3||wd===5));
 }
-const RECUR_L={day:'chaque jour',weekdays:'lun → ven',week:'chaque semaine',biweek:'toutes les 2 semaines',month:'chaque mois',lastwork:'dernier jour ouvré',year:'chaque année'};
+const RECUR_L={day:'chaque jour',weekdays:'lun → ven',weekly:'toutes les semaines',week:'chaque semaine',biweek:'toutes les 2 semaines',month:'chaque mois',lastwork:'dernier jour ouvré',year:'chaque année'};
 function nextRecur(d,r){
-  const step=x=>{if(r==='day')return addDays(x,1);if(r==='week')return addDays(x,7);if(r==='biweek')return addDays(x,14);
+  const step=x=>{if(r==='day')return addDays(x,1);if(r==='week'||r==='weekly')return addDays(x,7);if(r==='biweek')return addDays(x,14);
     if(r==='year'){const y=parseD(x);y.setFullYear(y.getFullYear()+1);return iso(y)}
     if(r==='lastwork'){const y=parseD(x);let n=lastWorkDay(y.getFullYear(),y.getMonth());if(n<=x)n=lastWorkDay(y.getFullYear(),y.getMonth()+1);return n}if(r==='month'){const y=parseD(x);const day=y.getDate();y.setDate(1);y.setMonth(y.getMonth()+1);y.setDate(Math.min(day,new Date(y.getFullYear(),y.getMonth()+1,0).getDate()));return iso(y)}
     let n=addDays(x,1);while([0,6].includes(parseD(n).getDay()))n=addDays(n,1);return n};
