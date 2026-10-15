@@ -436,7 +436,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.12.1';
+const VERSION='3.12.2';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -705,6 +705,7 @@ function render(){
 /* ---------- Jour ---------- */
 function eventsOn(d){return S.events.filter(e=>e.date===d||(e.endDate&&e.date<d&&e.endDate>=d)).sort(byTime)}
 const BYDAY=['SU','MO','TU','WE','TH','FR','SA'];
+const remG=r=>r.gsync===undefined||r.gsync===null?!!S.settings.pushReminders:!!r.gsync;
 const RREM=[['none','Une seule fois'],['day','Chaque jour'],['weekdays','Du lundi au vendredi'],['weekly','Toutes les semaines'],['week','Certains jours de la semaine'],['biweek','Toutes les 2 semaines'],['month','Chaque mois (même date)'],['lastwork','Dernier jour ouvré du mois'],['year','Chaque année']];
 const RTASK=[['none','Aucune'],['day','Chaque jour'],['weekdays','Lun → ven'],['week','Chaque semaine'],['biweek','Toutes les 2 semaines'],['month','Chaque mois'],['lastwork','Dernier jour ouvré du mois'],['year','Chaque année']];
 function lastWorkDay(y,m){const d=new Date(y,m+1,0);while(d.getDay()===0||d.getDay()===6)d.setDate(d.getDate()-1);return iso(d)}
@@ -1254,7 +1255,7 @@ SUBS.google=()=>{
   }
   html+=sec('Google Maps (suggestions de lieux)')+`<div class="card"><label class="fld"><span>Clé API Google Maps</span><input type="text" data-c="setting" data-f="mapsKey" value="${esc(s.mapsKey||'')}" placeholder="AIza…" autocomplete="off"></label><details class="guide"><summary>Obtenir la clé (5 min)</summary><ol><li>Console Google › <b>API et services › Bibliothèque</b> : activez <b>Maps JavaScript API</b> et <b>Places API (New)</b>. Google Maps exige un compte de facturation, mais l'usage personnel reste dans le crédit gratuit mensuel.</li><li><b>Identifiants › Créer des identifiants › Clé API</b>.</li><li>Ouvrez la clé : <b>Restrictions › Sites Web</b>, ajoutez <code>${esc(location.origin)}/*</code> ; <b>Restrictions d'API</b> : Maps JavaScript API et Places API (New).</li><li>Copiez la clé ici. Dans un événement, tapez 3 lettres du lieu : les adresses apparaissent.</li></ol></details></div>`;
   html+=sec('Sauvegarde Google Drive')+`<div class="card"><div class="srow"><div class="grow">Synchroniser toutes mes données entre mes appareils<div class="small muted">Tâches, notes, rappels, habitudes, bibliothèque et emploi du temps passent du PC au téléphone et inversement. ${S.settings.lastDriveSync?'Dernière synchro : '+fmtDate(iso(new Date(S.settings.lastDriveSync)))+' à '+hhmm(new Date(S.settings.lastDriveSync)):'Pas encore synchronisé'}. Les photos restent sur chaque appareil.</div></div><input type="checkbox" class="sw" data-c="setting" data-f="driveSync" ${s.driveSync!==false?'checked':''}></div><div class="srow"><div class="grow">Sauvegarde automatique quotidienne<div class="small muted">${S.settings.lastDriveBackup?'Dernière : '+fmtDate(iso(new Date(S.settings.lastDriveBackup)))+' à '+hhmm(new Date(S.settings.lastDriveBackup)):'Pas encore de sauvegarde'} · fichier « ${DRIVE_NAME} » dans ton Drive</div></div><input type="checkbox" class="sw" data-c="setting" data-f="driveBackup" ${s.driveBackup?'checked':''}></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${ok&&hasDrive()?`<button class="btn sm primary" data-a="driveNow">☁️ Sauvegarder maintenant</button>`:`<button class="btn sm primary" data-a="gDriveAuth" ${s.clientId?'':'disabled'}>☁️ Autoriser Google Drive</button>`}<button class="btn sm ghost" data-a="driveRestore" ${s.clientId?'':'disabled'}>Restaurer depuis Drive</button></div></div>`;
-  html+=sec('Options')+`<div class="card"><div class="srow"><div class="grow">Rappels avec alerte sur le téléphone<div class="small muted">Chaque rappel est ajouté à Google Agenda (🔔) avec une notification : ton téléphone sonne même Thêta fermée. Sans heure : à ${esc(s.dayStart)}.</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushReminders" ${s.pushReminders?'checked':''}></div><div class="srow"><div class="grow">Envoyer aussi les tâches datées<div class="small muted">Elles apparaissent avec ✅ dans l'agenda par défaut</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushTasks" ${s.pushTasks?'checked':''}></div><div class="srow"><div class="grow">Synchro automatique<div class="small muted">À l'ouverture et après chaque modification, tant que la session Google est active (1 h)</div></div><input type="checkbox" class="sw" data-c="setting" data-f="autoSync" ${s.autoSync?'checked':''}></div></div>`;
+  html+=sec('Options')+`<div class="card"><div class="srow"><div class="grow">Rappels avec alerte sur le téléphone<div class="small muted">Réglage par défaut : chaque rappel est ajouté à Google Agenda (🔔) avec une notification, ton téléphone sonne même Thêta fermée. Tu peux le changer rappel par rappel. Sans heure : à ${esc(s.dayStart)}.</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushReminders" ${s.pushReminders?'checked':''}></div><div class="srow"><div class="grow">Envoyer aussi les tâches datées<div class="small muted">Elles apparaissent avec ✅ dans l'agenda par défaut</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushTasks" ${s.pushTasks?'checked':''}></div><div class="srow"><div class="grow">Synchro automatique<div class="small muted">À l'ouverture et après chaque modification, tant que la session Google est active (1 h)</div></div><input type="checkbox" class="sw" data-c="setting" data-f="autoSync" ${s.autoSync?'checked':''}></div></div>`;
   html+=`<details class="card guide" style="margin-top:14px" ${s.clientId?'':'open'}><summary>Guide : obtenir l'identifiant client (10 min, une seule fois)</summary><ol>
 <li>Ouvrez <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">console.cloud.google.com</a> et créez un projet « Thêta ».</li>
 <li>Menu <b>API et services › Bibliothèque</b> : activez <b>Google Calendar API</b>.</li>
@@ -1330,7 +1331,7 @@ function markPending(o,kind){
   o.updatedAt=Date.now();
   if(kind==='event'){ if(!o.readonly) o.sync='pending'; }
   else if(kind==='task'){ if((S.settings.pushTasks&&!o.noSync&&o.date)||o.gid) o.sync='pending'; }
-  else if(kind==='rem'){ if((S.settings.pushReminders&&!(o.recur==='none'&&o.done))||o.gid) o.sync='pending'; }
+  else if(kind==='rem'){ if((remG(o)&&!(o.recur==='none'&&o.done))||o.gid) o.sync='pending'; }
   queueSync();
 }
 function removeUndo(key,obj,label){
@@ -1438,10 +1439,12 @@ function reminderSheet(r){
     fld('Rappel',inp('title',v.title,'text','required autofocus'))+
     `<div class="row2">${fld('Date (ou 1er jour)',inp('date',v.date,'date'))}${fld('Heure',inp('time',v.time,'time'))}</div>`+
     fld('Répétition',`<select name="recur" onchange="document.getElementById('wdays').style.display=this.value==='week'?'':'none'">${RREM.map(([k,l])=>`<option value="${k}" ${(v.recur||'none')===k?'selected':''}>${l}</option>`).join('')}</select>`)+
-    `<div id="wdays" class="wdays" style="${v.recur==='week'?'':'display:none'}">${[1,2,3,4,5,6,0].map(i=>`<label><input type="checkbox" name="wd${i}" ${days.includes(i)?'checked':''}><span>${JOURS[i].slice(0,3)}</span></label>`).join('')}</div>`,
+    `<div id="wdays" class="wdays" style="${v.recur==='week'?'':'display:none'}">${[1,2,3,4,5,6,0].map(i=>`<label><input type="checkbox" name="wd${i}" ${days.includes(i)?'checked':''}><span>${JOURS[i].slice(0,3)}</span></label>`).join('')}</div>`+
+    (S.settings.clientId?`<label class="srow"><span class="grow">📅 Synchroniser avec Google Agenda<div class="small muted">Le téléphone sonne même si Thêta est fermée</div></span><input type="checkbox" class="sw" name="gsync" ${remG(v)?'checked':''}></label>`:''),
     {onSave(fd){const title=fd.title.trim();if(!title)return false;const o=r||{id:uid(),done:false,created:Date.now()};
       const dd=[0,1,2,3,4,5,6].filter(i=>fd['wd'+i]);
       Object.assign(o,{title,date:fd.date||today(),time:fd.time,recur:fd.recur,days:fd.recur==='week'?(dd.length?dd:[parseD(fd.date||today()).getDay()]):null});
+      if(S.settings.clientId) o.gsync=!!fd.gsync;
       if(isNew)S.reminders.push(o);markPending(o,'rem');save();render();toast(isNew?'🔔 Rappel ajouté':'Rappel modifié')},
      onDelete:isNew?null:()=>{closeSheet();removeUndo('reminders',r,'Rappel')}});
 }
@@ -1904,9 +1907,9 @@ async function sync(interactive){
       }catch(err){ if(err.message==='auth') throw err; x.syncErr=err.message; failed.push(x.title); }
     }
     // 3 bis. envoi des rappels (alerte sur le téléphone via Google Agenda)
-    if(S.settings.pushReminders) S.reminders.forEach(r=>{if(!r.gid&&!r.sync&&!(r.recur==='none'&&(r.done||r.date<today())))r.sync='pending'});
+    S.reminders.forEach(r=>{if(remG(r)&&!r.gid&&!r.sync&&!(r.recur==='none'&&(r.done||r.date<today())))r.sync='pending'});
     for(const r of S.reminders.filter(r=>r.sync==='pending')){
-      const cal=r.calId||target, want=S.settings.pushReminders&&!(r.recur==='none'&&r.done);
+      const cal=r.calId||target, want=remG(r)&&!(r.recur==='none'&&r.done);
       try{
         if(!want){ if(r.gid){await gapi('DELETE',`/calendars/${enc(cal)}/events/${enc(r.gid)}`);r.gid=null;up++} r.sync=null; continue; }
         const b=gRemBody(r); let res;
@@ -2433,7 +2436,7 @@ const C={
     if(f==='mapsKey'){ mapsP=null; }
     if(f==='font'){ render(); }
     if(f==='clientId'){ tokenClient=null; if(el.value.trim()) loadGIS().catch(()=>{}); render(); }
-    if(f==='pushReminders'){ S.reminders.forEach(r=>{ if(r.gid||(S.settings.pushReminders&&!(r.recur==='none'&&r.done))) r.sync='pending'; }); save(); queueSync(); }
+    if(f==='pushReminders'){ S.reminders.forEach(r=>{ if(r.gid||(remG(r)&&!(r.recur==='none'&&r.done))) r.sync='pending'; }); save(); queueSync(); }
     if(f==='pushTasks'){ S.tasks.forEach(x=>{ if(x.date&&!x.noSync&&(S.settings.pushTasks||x.gid)) x.sync='pending'; }); save(); queueSync(); }
   },
   calImport(el){ const c=S.settings.calendars.find(c=>c.id===el.dataset.id); if(!c) return; c.import=el.checked; S.settings.lastFullSync=0; if(!el.checked){ S.events=S.events.filter(e=>!(e.calId===c.id&&e.source==='google'&&e.sync!=='pending')); } save(); },
