@@ -436,7 +436,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.12.2';
+const VERSION='3.12.3';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -1255,7 +1255,7 @@ SUBS.google=()=>{
   }
   html+=sec('Google Maps (suggestions de lieux)')+`<div class="card"><label class="fld"><span>Clé API Google Maps</span><input type="text" data-c="setting" data-f="mapsKey" value="${esc(s.mapsKey||'')}" placeholder="AIza…" autocomplete="off"></label><details class="guide"><summary>Obtenir la clé (5 min)</summary><ol><li>Console Google › <b>API et services › Bibliothèque</b> : activez <b>Maps JavaScript API</b> et <b>Places API (New)</b>. Google Maps exige un compte de facturation, mais l'usage personnel reste dans le crédit gratuit mensuel.</li><li><b>Identifiants › Créer des identifiants › Clé API</b>.</li><li>Ouvrez la clé : <b>Restrictions › Sites Web</b>, ajoutez <code>${esc(location.origin)}/*</code> ; <b>Restrictions d'API</b> : Maps JavaScript API et Places API (New).</li><li>Copiez la clé ici. Dans un événement, tapez 3 lettres du lieu : les adresses apparaissent.</li></ol></details></div>`;
   html+=sec('Sauvegarde Google Drive')+`<div class="card"><div class="srow"><div class="grow">Synchroniser toutes mes données entre mes appareils<div class="small muted">Tâches, notes, rappels, habitudes, bibliothèque et emploi du temps passent du PC au téléphone et inversement. ${S.settings.lastDriveSync?'Dernière synchro : '+fmtDate(iso(new Date(S.settings.lastDriveSync)))+' à '+hhmm(new Date(S.settings.lastDriveSync)):'Pas encore synchronisé'}. Les photos restent sur chaque appareil.</div></div><input type="checkbox" class="sw" data-c="setting" data-f="driveSync" ${s.driveSync!==false?'checked':''}></div><div class="srow"><div class="grow">Sauvegarde automatique quotidienne<div class="small muted">${S.settings.lastDriveBackup?'Dernière : '+fmtDate(iso(new Date(S.settings.lastDriveBackup)))+' à '+hhmm(new Date(S.settings.lastDriveBackup)):'Pas encore de sauvegarde'} · fichier « ${DRIVE_NAME} » dans ton Drive</div></div><input type="checkbox" class="sw" data-c="setting" data-f="driveBackup" ${s.driveBackup?'checked':''}></div><div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:8px">${ok&&hasDrive()?`<button class="btn sm primary" data-a="driveNow">☁️ Sauvegarder maintenant</button>`:`<button class="btn sm primary" data-a="gDriveAuth" ${s.clientId?'':'disabled'}>☁️ Autoriser Google Drive</button>`}<button class="btn sm ghost" data-a="driveRestore" ${s.clientId?'':'disabled'}>Restaurer depuis Drive</button></div></div>`;
-  html+=sec('Options')+`<div class="card"><div class="srow"><div class="grow">Rappels avec alerte sur le téléphone<div class="small muted">Réglage par défaut : chaque rappel est ajouté à Google Agenda (🔔) avec une notification, ton téléphone sonne même Thêta fermée. Tu peux le changer rappel par rappel. Sans heure : à ${esc(s.dayStart)}.</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushReminders" ${s.pushReminders?'checked':''}></div><div class="srow"><div class="grow">Envoyer aussi les tâches datées<div class="small muted">Elles apparaissent avec ✅ dans l'agenda par défaut</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushTasks" ${s.pushTasks?'checked':''}></div><div class="srow"><div class="grow">Synchro automatique<div class="small muted">À l'ouverture et après chaque modification, tant que la session Google est active (1 h)</div></div><input type="checkbox" class="sw" data-c="setting" data-f="autoSync" ${s.autoSync?'checked':''}></div></div>`;
+  html+=sec('Options')+`<div class="card"><div class="srow"><div class="grow">Reconnexion automatique à Google<div class="small muted">Quand la session expire (toutes les heures), Thêta la renouvelle seule${gAccount()?' avec le compte '+esc(gAccount()):''}. Décoche si la fenêtre Google te dérange : il faudra alors toucher « Synchroniser ».</div></div><input type="checkbox" class="sw" data-c="setting" data-f="autoRenew" ${s.autoRenew!==false?'checked':''}></div><div class="srow"><div class="grow">Rappels avec alerte sur le téléphone<div class="small muted">Réglage par défaut : chaque rappel est ajouté à Google Agenda (🔔) avec une notification, ton téléphone sonne même Thêta fermée. Tu peux le changer rappel par rappel. Sans heure : à ${esc(s.dayStart)}.</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushReminders" ${s.pushReminders?'checked':''}></div><div class="srow"><div class="grow">Envoyer aussi les tâches datées<div class="small muted">Elles apparaissent avec ✅ dans l'agenda par défaut</div></div><input type="checkbox" class="sw" data-c="setting" data-f="pushTasks" ${s.pushTasks?'checked':''}></div><div class="srow"><div class="grow">Synchro automatique<div class="small muted">À l'ouverture et après chaque modification, tant que la session Google est active (1 h)</div></div><input type="checkbox" class="sw" data-c="setting" data-f="autoSync" ${s.autoSync?'checked':''}></div></div>`;
   html+=`<details class="card guide" style="margin-top:14px" ${s.clientId?'':'open'}><summary>Guide : obtenir l'identifiant client (10 min, une seule fois)</summary><ol>
 <li>Ouvrez <a href="https://console.cloud.google.com/projectcreate" target="_blank" rel="noopener">console.cloud.google.com</a> et créez un projet « Thêta ».</li>
 <li>Menu <b>API et services › Bibliothèque</b> : activez <b>Google Calendar API</b>.</li>
@@ -1794,6 +1794,7 @@ const SCOPES='https://www.googleapis.com/auth/calendar.events https://www.google
 const hasDrive=()=>!!(gTok&&tokValid()&&(gTok.scope||'').includes('drive.file'));
 const TZ=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Paris'}catch(e){return 'Europe/Paris'}})();
 let gTok=null; try{gTok=JSON.parse(localStorage.getItem('mo_gtok'))}catch(e){}
+const gAccount=()=>{const st=S.settings;if(st.gEmail)return st.gEmail;const p=(st.calendars||[]).find(c=>c.primary);return p&&/@/.test(p.id)?p.id:''};
 const tokValid=()=>!!(gTok&&gTok.exp>Date.now()+60000);
 let gisP=null, tokenClient=null, tokenClientId=null, tokRes=null, tokRej=null, syncing=false, syncT=null;
 function loadGIS(){
@@ -1815,7 +1816,7 @@ function getToken(interactive,force){
         error_callback:e=>tokRej&&tokRej(new Error(e&&e.type==='popup_closed'?'Connexion annulée':e&&e.type==='popup_failed_to_open'?'Fenêtre Google bloquée : réessayez':'Google : '+((e&&(e.message||e.type))||'erreur')))});
       tokenClientId=cid;
     }
-    tokenClient.requestAccessToken({prompt:''});
+    const hint=gAccount(); tokenClient.requestAccessToken(hint?{prompt:'',login_hint:hint}:{prompt:''});
   }));
 }
 async function gapi(method,path,body){
@@ -1832,6 +1833,7 @@ async function loadCalendars(){
   S.settings.calendars=(r.items||[]).map(c=>{const o=old.find(x=>x.id===c.id);const name=c.primary?'Principal':(c.summaryOverride||c.summary);
     return {id:c.id,name,color:c.backgroundColor||'#4c6ef5',role:c.accessRole,primary:!!c.primary,import:o?o.import:(!!c.primary||/famille|family|todoist/i.test(name))}});
   const p=S.settings.calendars.find(c=>c.primary);
+  if(p&&/@/.test(p.id)) S.settings.gEmail=p.id;
   if(p&&!S.settings.calendars.some(c=>c.id===S.settings.targetCal)) {
     const old=S.settings.targetCal; S.settings.targetCal=p.id;
     [...S.events,...S.tasks].forEach(o=>{if(!o.calId||o.calId===old)o.calId=p.id});
@@ -2578,13 +2580,13 @@ function init(){
   // Vérifie les nouveautés toutes les 2 min 30 tant que Thêta est ouverte
   setInterval(()=>{ if(document.visibilityState==='visible'&&navigator.onLine&&tokValid()&&S.settings.autoSync&&!sheetOpen) sync(false); },150000);
   // Session Google expirée (ou presque) : on la renouvelle au toucher de la barre d'onglets, puis on synchronise
-  let renewAt=0;
+  let renewAt=0, renewOff=false;
   document.addEventListener('pointerup',e=>{
     if(!e.target.closest('#nav')) return;
-    const st=S.settings; if(!st.clientId||!st.autoSync||!st.lastSync||!navigator.onLine||syncing) return;
+    const st=S.settings; if(renewOff||st.autoRenew===false||!st.clientId||!st.autoSync||!st.lastSync||!navigator.onLine||syncing||!gAccount()) return;
     if(gTok&&gTok.exp-Date.now()>5*60e3) return;
-    if(Date.now()-renewAt<120e3) return; renewAt=Date.now();
-    getToken(true,true).then(()=>sync(false)).catch(()=>{});
+    if(Date.now()-renewAt<45*60e3) return; renewAt=Date.now();
+    getToken(true,true).then(()=>sync(false)).catch(()=>{ renewOff=true; });
   },true);
   setTimeout(()=>loadHolidays(false),2000);
   document.addEventListener('visibilitychange',()=>{ if(document.visibilityState==='visible'){ if(!sheetOpen&&document.activeElement.tagName!=='TEXTAREA') render(); checkReminders(); if(tokValid()&&S.settings.autoSync) sync(false); } });
