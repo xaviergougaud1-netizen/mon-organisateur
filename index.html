@@ -436,7 +436,7 @@ code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;wo
 <script>
 'use strict';
 /* ================= Utilitaires ================= */
-const VERSION='3.12.3';
+const VERSION='3.12.4';
 const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
 const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
 const pad=n=>String(n).padStart(2,'0');
@@ -533,6 +533,7 @@ function normalizeState(){
   const d=defaults();
   for(const k in d) if(S[k]===undefined) S[k]=d[k];
   S.settings={...d.settings,...S.settings};
+  if(!S.settings._retired){ S.settings.driveSync=false; S.settings._retired=true; }
   if(!S.settings._lift2){ if(+S.settings.navLift===18) S.settings.navLift=4; S.settings._lift2=true; }
   if(!S.settings._bg3){ const b=S.settings.bg;
     if(b&&b.startsWith('p_')){S.settings.bgShape='montagnes';S.settings.bgColor=b.slice(2)===S.settings.palette?'auto':b.slice(2);S.settings.bg='shape'}
@@ -973,7 +974,8 @@ VIEWS.jour=()=>{
   const hasData=S.tasks.length+S.items.length+S.events.length>5;
   const D=parseD(t), label=isToday?hello+' 👋':jourOff===1?'Demain':cap(JOURS[D.getDay()]);
   const subl=[all.length?`${dn} / ${plural(all.length,'tâche')} accomplie${dn>1?'s':''}`:'',late.length?`${late.length} en retard`:'',evs.length?plural(evs.length,'événement'):'',rems.length?plural(rems.length,'rappel'):''].filter(Boolean).join(' · ')||(isToday?'Rien de prévu : profitez-en':'Rien de prévu ce jour-là');
-  let html=`<div class="hero">${isToday?'':`<div class="hero-date">${jourOff===1?'Demain':'Dans '+jourOff+' jours'}</div>`}<div class="hero-day">${cap(JOURS[D.getDay()])} ${D.getDate()} ${MOIS_A[D.getMonth()]}</div><div class="hero-sub">${subl}</div>${miniStrip(T)}<button class="hero-sync" data-a="sync" aria-label="Synchroniser avec Google Agenda">🔄</button></div>`;
+  let html=`<a class="banner" href="https://xaviergougaud1-netizen.github.io/Theta-v2/" style="margin-bottom:12px">🚀 Thêta continue dans <b>&nbsp;Thêta V2</b><span class="grow"></span>Ouvrir →</a>`;
+  html+=`<div class="hero">${isToday?'':`<div class="hero-date">${jourOff===1?'Demain':'Dans '+jourOff+' jours'}</div>`}<div class="hero-day">${cap(JOURS[D.getDay()])} ${D.getDate()} ${MOIS_A[D.getMonth()]}</div><div class="hero-sub">${subl}</div>${miniStrip(T)}<button class="hero-sync" data-a="sync" aria-label="Synchroniser avec Google Agenda">🔄</button></div>`;
 
   if(rems.length) html+=sec('Rappels',rems.length)+`<div class="list">${rems.map(r=>remRow(r,t)).join('')}</div>`;
   const nrev=S.notes.filter(n=>n.status==='review').length;
