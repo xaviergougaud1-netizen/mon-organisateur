@@ -1,6 +1,6 @@
 // Thêta — service worker (hors ligne, partage entrant, polices)
 // Changez ce numéro à chaque mise à jour de index.html pour forcer le rafraîchissement.
-const CACHE = 'theta-v3.12.3';
+const CACHE = 'theta-v2-preview-1';
 const ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png', './icon-maskable-512.png', './apple-touch-icon.png'];
 
 self.addEventListener('install', e => {
@@ -10,7 +10,7 @@ self.addEventListener('install', e => {
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== 'theta-share').map(k => caches.delete(k))))
+      .then(keys => Promise.all(keys.filter(k => k !== CACHE && k !== 'theta-v2-share').map(k => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -20,7 +20,7 @@ async function handleShare(req) {
   const fd = await req.formData();
   const text = [fd.get('title'), fd.get('text'), fd.get('url')].filter(Boolean).join('\n');
   const files = fd.getAll('media').filter(f => f && f.size);
-  const c = await caches.open('theta-share');
+  const c = await caches.open('theta-v2-share');
   await c.put('share/meta', new Response(JSON.stringify({ text, n: files.length, t: Date.now() }), { headers: { 'Content-Type': 'application/json' } }));
   for (let i = 0; i < files.length; i++) await c.put('share/file' + i, new Response(files[i], { headers: { 'Content-Type': files[i].type || 'image/jpeg' } }));
   return Response.redirect(new URL('./?shared=1', self.registration.scope).href, 303);
