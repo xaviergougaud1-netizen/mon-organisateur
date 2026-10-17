@@ -1,7 +1,7 @@
 {
-  "name": "Thêta",
-  "short_name": "Thêta",
-  "description": "Thêta : tâches, todo, agenda et notes vocales, au calme et hors ligne.",
+  "name": "Thêta — Atelier V2",
+  "short_name": "Thêta V2",
+  "description": "Version expérimentale de Thêta : ergonomie améliorée, données isolées et fonctionnement hors ligne.",
   "lang": "fr",
   "start_url": "./",
   "scope": "./",
