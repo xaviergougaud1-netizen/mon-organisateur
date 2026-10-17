@@ -8,7 +8,7 @@
 <link rel="manifest" href="manifest.json">
 <link rel="icon" href="icon-192.png">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
-<title>Thêta</title>
+<title>Thêta · Atelier V2</title>
 <style>
 :root{--a1:#4c6ef5;--a2:#1e3a8a;--r:18px;--navh:66px;color-scheme:dark}
 html[data-theme=dark]{--bg:#0c0e13;--card:#171a22;--card2:#20242f;--card3:#2c3140;--text:#eef1f7;--muted:#959db0;--line:rgba(255,255,255,.07);--glass:rgba(23,26,34,.74);--shadow:0 8px 24px rgba(0,0,0,.4);--relief:inset 0 1px 0 rgba(255,255,255,.05);--toast:#262b38}
@@ -417,6 +417,34 @@ body.navtop #toast{bottom:calc(30px + env(safe-area-inset-bottom))}
 .hchips{display:flex;flex-wrap:wrap;gap:8px}
 .guide ol{padding-left:20px;margin:8px 0}.guide li{margin:6px 0}
 code{background:var(--card2);border-radius:6px;padding:1px 5px;font-size:13px;word-break:break-all}
+
+/* ===== Atelier V2 : lisibilité, accessibilité et confort tactile ===== */
+:root{--r:20px}
+button,input,select,textarea{touch-action:manipulation}
+button:focus-visible,a:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{
+  outline:3px solid color-mix(in srgb,var(--a1) 72%,white);
+  outline-offset:3px
+}
+button,.btn,.icon-btn,.chip,.crumb,.chk{transition:background-color .16s ease,border-color .16s ease,transform .16s ease,box-shadow .16s ease}
+@media(hover:hover) and (pointer:fine){
+  .btn:hover,.icon-btn:hover,.chip:hover,.crumb:hover{filter:brightness(1.06)}
+  .item:hover{border-color:color-mix(in srgb,var(--a1) 35%,var(--line))}
+}
+@media(max-width:480px){
+  body{font-size:16px;line-height:1.5}
+  #top{padding-left:14px;padding-right:14px}
+  main{padding-left:12px;padding-right:12px}
+  .item{gap:10px;padding:13px 12px}
+  .chk{width:28px;height:28px;flex-shrink:0}
+  .icon-btn{width:44px;height:44px}
+  .btn{min-height:42px}
+  input,select,textarea{font-size:16px}
+  .sec{margin-top:20px}
+}
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{scroll-behavior:auto!important;animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+
 </style>
 </head>
 <body>
@@ -514,7 +542,7 @@ function guessType(t){const n=norm(t||'');if(/\b(bd|bande dessinee|manga|comics)
 const PT={task:['📋','Tâche'],event:['📅','Agenda'],reminder:['🔔','Rappel'],todo:['📝','Notes'],idea:['💡','Idée'],loan:['📚','Prêt']};
 
 /* ================= Données ================= */
-const KEY='mo_state_v2';
+const KEY='theta_v2_state';
 let S;
 function defaults(){
   const f=(name,parentId,color,icon)=>({id:uid(),name,parentId,color,icon});
@@ -552,7 +580,7 @@ function save(){
 
 /* Images : IndexedDB (bien plus de place que localStorage) */
 const IDB={db:null,
-  open(){return this.db?Promise.resolve(this.db):new Promise((res,rej)=>{const r=indexedDB.open('mo_images',1);r.onupgradeneeded=()=>r.result.createObjectStore('img');r.onsuccess=()=>{this.db=r.result;res(this.db)};r.onerror=()=>rej(r.error)})},
+  open(){return this.db?Promise.resolve(this.db):new Promise((res,rej)=>{const r=indexedDB.open('theta_v2_images',1);r.onupgradeneeded=()=>r.result.createObjectStore('img');r.onsuccess=()=>{this.db=r.result;res(this.db)};r.onerror=()=>rej(r.error)})},
   async run(mode,fn){const db=await this.open();return new Promise((res,rej)=>{const t=db.transaction('img',mode);const r=fn(t.objectStore('img'));t.oncomplete=()=>res(r&&r.result);t.onerror=()=>rej(t.error)})},
   get(k){return this.run('readonly',s=>s.get(k))},
   set(k,v){return this.run('readwrite',s=>s.put(v,k))},
@@ -1793,7 +1821,7 @@ const GAPI='https://www.googleapis.com/calendar/v3';
 const SCOPES='https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/drive.file';
 const hasDrive=()=>!!(gTok&&tokValid()&&(gTok.scope||'').includes('drive.file'));
 const TZ=(()=>{try{return Intl.DateTimeFormat().resolvedOptions().timeZone||'Europe/Paris'}catch(e){return 'Europe/Paris'}})();
-let gTok=null; try{gTok=JSON.parse(localStorage.getItem('mo_gtok'))}catch(e){}
+let gTok=null; try{gTok=JSON.parse(localStorage.getItem('theta_v2_gtok'))}catch(e){}
 const gAccount=()=>{const st=S.settings;if(st.gEmail)return st.gEmail;const p=(st.calendars||[]).find(c=>c.primary);return p&&/@/.test(p.id)?p.id:''};
 const tokValid=()=>!!(gTok&&gTok.exp>Date.now()+60000);
 let gisP=null, tokenClient=null, tokenClientId=null, tokRes=null, tokRej=null, syncing=false, syncT=null;
@@ -1812,7 +1840,7 @@ function getToken(interactive,force){
     tokRes=res; tokRej=rej;
     if(!tokenClient||tokenClientId!==cid){
       tokenClient=google.accounts.oauth2.initTokenClient({client_id:cid,scope:SCOPES,
-        callback:r=>{if(r.error){tokRej&&tokRej(new Error('Google : '+r.error));return}gTok={t:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000,scope:r.scope||''};try{localStorage.setItem('mo_gtok',JSON.stringify(gTok))}catch(e){}tokRes&&tokRes(gTok.t)},
+        callback:r=>{if(r.error){tokRej&&tokRej(new Error('Google : '+r.error));return}gTok={t:r.access_token,exp:Date.now()+(+r.expires_in||3600)*1000,scope:r.scope||''};try{localStorage.setItem('theta_v2_gtok',JSON.stringify(gTok))}catch(e){}tokRes&&tokRes(gTok.t)},
         error_callback:e=>tokRej&&tokRej(new Error(e&&e.type==='popup_closed'?'Connexion annulée':e&&e.type==='popup_failed_to_open'?'Fenêtre Google bloquée : réessayez':'Google : '+((e&&(e.message||e.type))||'erreur')))});
       tokenClientId=cid;
     }
@@ -1822,7 +1850,7 @@ function getToken(interactive,force){
 async function gapi(method,path,body){
   const tok=await getToken(false);
   const r=await fetch(GAPI+path,{method,headers:{Authorization:'Bearer '+tok,'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
-  if(r.status===401){gTok=null;localStorage.removeItem('mo_gtok');throw new Error('auth')}
+  if(r.status===401){gTok=null;localStorage.removeItem('theta_v2_gtok');throw new Error('auth')}
   if(r.status===204||r.status===410||(r.status===404&&method==='DELETE')) return null;
   if(!r.ok){let msg=r.status;try{msg=(await r.json()).error.message}catch(e){}throw new Error('Google : '+msg)}
   return r.json();
@@ -1998,7 +2026,7 @@ const DRIVE='https://www.googleapis.com/drive/v3', DRIVE_UP='https://www.googlea
 async function gfetch(url,opt={}){
   const tok=await getToken(false);
   const r=await fetch(url,{...opt,headers:{Authorization:'Bearer '+tok,...(opt.headers||{})}});
-  if(r.status===401){gTok=null;localStorage.removeItem('mo_gtok');throw new Error('auth')}
+  if(r.status===401){gTok=null;localStorage.removeItem('theta_v2_gtok');throw new Error('auth')}
   if(!r.ok){let msg='';try{msg=(await r.json()).error.message}catch(e){}const err=new Error('Google Drive : '+r.status+' '+msg);err.status=r.status;throw err}
   return r.status===204?null:r.json();
 }
@@ -2363,7 +2391,7 @@ const A={
   async forceUpdate(){
     toast('🔄 Mise à jour… (vos données sont conservées)');
     try{ const regs=await navigator.serviceWorker.getRegistrations(); await Promise.all(regs.map(r=>r.unregister())); }catch(e){}
-    try{ const ks=await caches.keys(); await Promise.all(ks.filter(k=>k!=='theta-share').map(k=>caches.delete(k))); }catch(e){}
+    try{ const ks=await caches.keys(); await Promise.all(ks.filter(k=>k!=='theta-v2-share').map(k=>caches.delete(k))); }catch(e){}
     setTimeout(()=>location.replace(location.pathname+'?v='+Date.now()),400);
   },
   quickAdd(){ openSheet('Ajouter',`<div class="menu" style="grid-template-columns:1fr 1fr"><button type="button" data-a="slotTask" data-v=""><span>✅</span>Une tâche</button><button type="button" data-a="slotEvent" data-v=""><span>📅</span>Un événement</button><button type="button" data-a="newReminder"><span>🔔</span>Un rappel</button><button type="button" data-a="newItem"><span>📝</span>Une note</button></div>`); },
@@ -2414,8 +2442,8 @@ const A={
   tabMove(id,el){ const i=+id, j=i+(+el.dataset.v), o=S.settings.tabOrder; if(j<0||j>=o.length) return; [o[i],o[j]]=[o[j],o[i]]; save(); render(); },
   async gConnect(){ try{ await getToken(true); await loadCalendars(); toast('🟢 Connecté à Google'); render(); sync(false); }catch(e){ toast('⚠️ '+e.message); } },
   async gReloadCals(){ try{ await getToken(true); await loadCalendars(); render(); toast('Liste des agendas actualisée'); }catch(e){ toast('⚠️ '+e.message); } },
-  gLogout(){ try{ if(gTok&&window.google&&google.accounts) google.accounts.oauth2.revoke(gTok.t,()=>{}); }catch(e){} gTok=null; localStorage.removeItem('mo_gtok'); render(); toast('Déconnecté de Google'); },
-  async gDriveAuth(){ try{ gTok=null; localStorage.removeItem('mo_gtok'); await getToken(true); render(); if(hasDrive()){ await driveBackup(); render(); toast('☁️ Sauvegarde Drive activée'); } else toast('Accès Drive non accordé : cochez la case Drive dans la fenêtre Google'); }catch(e){ toast('⚠️ '+e.message); } },
+  gLogout(){ try{ if(gTok&&window.google&&google.accounts) google.accounts.oauth2.revoke(gTok.t,()=>{}); }catch(e){} gTok=null; localStorage.removeItem('theta_v2_gtok'); render(); toast('Déconnecté de Google'); },
+  async gDriveAuth(){ try{ gTok=null; localStorage.removeItem('theta_v2_gtok'); await getToken(true); render(); if(hasDrive()){ await driveBackup(); render(); toast('☁️ Sauvegarde Drive activée'); } else toast('Accès Drive non accordé : cochez la case Drive dans la fenêtre Google'); }catch(e){ toast('⚠️ '+e.message); } },
   async driveNow(){ try{ toast('☁️ Sauvegarde en cours…'); await driveBackup(); render(); toast('☁️ Sauvegardé sur Google Drive'); }catch(e){ toast('⚠️ '+e.message); } },
   async driveRestore(){ try{ await getToken(true); await driveRestore(); }catch(e){ toast('⚠️ Restauration : '+e.message); } },
   setTarget(id){ S.settings.targetCal=id; save(); render(); },
@@ -2429,7 +2457,7 @@ const A={
     }catch(e){ toast('⚠️ Export impossible : '+e.message); }
   },
   import(){ $('#fileImport').click(); },
-  resetAll(){ if(!confirm('Effacer TOUTES les données de l\'app sur ce téléphone ? Pensez à exporter avant.')) return; if(!confirm('Vraiment tout effacer ? C\'est définitif.')) return; localStorage.removeItem(KEY); localStorage.removeItem('mo_gtok'); gTok=null; IDB.clear().catch(()=>{}); hasCustomBg=false; $('#bg').dataset.k=''; S=defaults(); normalizeState(); save(); sub=null; view='jour'; render(); toast('Données effacées'); },
+  resetAll(){ if(!confirm('Effacer TOUTES les données de l\'app sur ce téléphone ? Pensez à exporter avant.')) return; if(!confirm('Vraiment tout effacer ? C\'est définitif.')) return; localStorage.removeItem(KEY); localStorage.removeItem('theta_v2_gtok'); gTok=null; IDB.clear().catch(()=>{}); hasCustomBg=false; $('#bg').dataset.k=''; S=defaults(); normalizeState(); save(); sub=null; view='jour'; render(); toast('Données effacées'); },
 };
 const C={
   prop(el){ const[n,p]=findProp(el.dataset.id); if(!p) return; p[el.dataset.f]=el.value; save(); },
@@ -2531,10 +2559,10 @@ const holiHTML=h=>`<div class="holi"><span style="font-size:22px">🏖️</span>
 /* ================= Partager vers Thêta ================= */
 async function handleShared(){
   try{
-    const c=await caches.open('theta-share'), m=await c.match('share/meta'); if(!m) return;
+    const c=await caches.open('theta-v2-share'), m=await c.match('share/meta'); if(!m) return;
     const meta=await m.json(), files=[];
     for(let i=0;i<(meta.n||0);i++){const r=await c.match('share/file'+i);if(r){const b=await r.blob();files.push(new File([b],'partage'+i,{type:b.type||'image/jpeg'}))}}
-    await caches.delete('theta-share');
+    await caches.delete('theta-v2-share');
     const ids=files.length?await storeImages(files):[];
     shareSheet((meta.text||'').trim(),ids);
   }catch(e){toast('⚠️ Partage : '+e.message)}
